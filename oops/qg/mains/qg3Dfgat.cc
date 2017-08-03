@@ -9,12 +9,14 @@
  */
 
 #include "model/QgTraitFGAT.h"
+#include "model/instantiateQgLocalizationFactory.h"
 #include "model/instantiateQgObsFactory.h"
 #include "oops/runs/Variational.h"
 #include "oops/runs/Run.h"
 
 int main(int argc,  char ** argv) {
   oops::Run run(argc, argv);
+  qg::instantiateQgLocalizationFactory();
   qg::instantiateQgObsFactory();
   oops::Variational<qg::QgTraitFGAT> var;
   run.execute(var);

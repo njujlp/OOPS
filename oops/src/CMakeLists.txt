@@ -148,7 +148,9 @@ oops/base/WeightingFct.h
 oops/base/WeightingFct.cc
 oops/base/instantiateCovarFactory.h
 
+oops/generic/LocalizationNICAS.h
 oops/generic/ObsErrorDiag.h
+oops/generic/instantiateLocalizationFactory.h
 oops/generic/instantiateObsErrorFactory.h
 
 oops/interface/ErrorCovariance.h
@@ -157,6 +159,7 @@ oops/interface/Increment.h
 oops/interface/LinearModel.h
 oops/interface/LinearObsOperator.h
 oops/interface/Localization.h
+oops/interface/LocalizationBase.h
 oops/interface/Locations.h
 oops/interface/Model.h
 oops/interface/ModelAtLocations.h

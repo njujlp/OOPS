@@ -15,7 +15,6 @@
 
 #include "model/GomQG.h"
 #include "model/LinearObsOp.h"
-#include "model/LocalizationMatrixQG.h"
 #include "model/LocQG.h"
 #include "model/ModelBias.h"
 #include "model/ModelBiasIncrement.h"
@@ -64,8 +63,6 @@ struct QgTraits {
 
   typedef qg::GomQG                 ModelAtLocations;
   typedef qg::LocQG                 Locations;
-
-  typedef qg::LocalizationMatrixQG  LocalizationMatrix;
 };
 
 const std::string QgTraits::nameCovar = "QgError";

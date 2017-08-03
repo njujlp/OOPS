@@ -32,7 +32,6 @@
 #include "lorenz95/Resolution.h"
 #include "lorenz95/StateL95.h"
 #include "lorenz95/TLML95.h"
-#include "lorenz95/LocalizationMatrixL95.h"
 
 namespace lorenz95 {
 
@@ -65,8 +64,6 @@ struct L95Traits {
 
   typedef lorenz95::GomL95                 ModelAtLocations;
   typedef lorenz95::LocsL95                Locations;
-
-  typedef lorenz95::LocalizationMatrixL95  LocalizationMatrix;
 };
 
 const std::string L95Traits::nameCovar = "L95Error";

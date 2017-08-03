@@ -39,6 +39,7 @@
     "tolerance": "1.0e-8"
   },
   "Localization": {
+    "localization": "L95",
     "length_scale": "1.0"
   },
   "ModelBiasCovariance": {

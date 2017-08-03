@@ -17,9 +17,12 @@
 #include <boost/noncopyable.hpp>
 
 #include "eckit/config/Configuration.h"
+#include "oops/interface/LocalizationBase.h"
 #include "util/DateTime.h"
 #include "util/ObjectCounter.h"
 #include "util/Printable.h"
+
+#include "lorenz95/L95Traits.h"
 
 // Forward declarations
 namespace lorenz95 {
@@ -29,8 +32,7 @@ namespace lorenz95 {
 /// Localization matrix for Lorenz 95 model.
 
 // -----------------------------------------------------------------------------
-class LocalizationMatrixL95: public util::Printable,
-                             private boost::noncopyable,
+class LocalizationMatrixL95: public oops::LocalizationBase<L95Traits>,
                              private util::ObjectCounter<LocalizationMatrixL95> {
  public:
   static const std::string classname() {return "lorenz95::LocalizationMatrixL95";}

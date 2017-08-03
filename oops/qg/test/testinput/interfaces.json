@@ -44,6 +44,7 @@
     "tolerance": "0.01"
   },
   "Localization": {
+    "localization": "QG",
     "standard_deviation": "1.0",
     "vertical_correlation": "0.4",
     "horizontal_length_scale": "2e6",
