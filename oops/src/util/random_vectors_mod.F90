@@ -11,14 +11,13 @@ module random_vectors_mod
 
 use, intrinsic :: iso_c_binding
 use kinds
+use random_cpp_mod
 
 implicit none
 private
 public :: random_vector
 
 ! ------------------------------------------------------------------------------
-
-integer, save, private :: iseed=0
 
 !> Fortran generic for generating random 1d, 2d and 3d arrays
 interface random_vector
@@ -34,13 +33,12 @@ subroutine c_random_vector(nn, xx) bind(c,name='random_vector_f90')
 implicit none
 integer(c_int), intent(in)    :: nn
 real(c_double), intent(inout) :: xx(nn)
+real(kind=kind_real) :: zz(nn)
 integer :: jj
 
-iseed=iseed+1
-call random_seed(iseed)
-call random_number(xx)
+call random_cpp(zz)
 do jj=1,nn
-  xx(jj)=2.0_kind_real*xx(jj)-1.0_kind_real
+  xx(jj)=2.0_kind_real*zz(jj)-1.0_kind_real
 enddo
 
 return
@@ -53,9 +51,7 @@ subroutine random_vector_1(xx)
 implicit none
 real(kind=kind_real), intent(inout) :: xx(:)
 
-iseed=iseed+1
-call random_seed(iseed)
-call random_number(xx)
+call random_cpp(xx)
 xx(:)=2.0_kind_real*xx(:)-1.0_kind_real
 
 return
@@ -67,10 +63,10 @@ end subroutine random_vector_1
 subroutine random_vector_2(xx)
 implicit none
 real(kind_real), intent(inout) :: xx(:,:)
+real(kind=kind_real) :: zz(size(xx))
 
-iseed=iseed+1
-call random_seed(iseed)
-call random_number(xx)
+call random_cpp(zz)
+xx = reshape(zz, shape(xx))
 xx(:,:)=2.0_kind_real*xx(:,:)-1.0_kind_real
 
 return
@@ -82,10 +78,10 @@ end subroutine random_vector_2
 subroutine random_vector_3(xx)
 implicit none
 real(kind_real), intent(inout) :: xx(:,:,:)
+real(kind=kind_real) :: zz(size(xx))
 
-iseed=iseed+1
-call random_seed(iseed)
-call random_number(xx)
+call random_cpp(zz)
+xx = reshape(zz, shape(xx))
 xx(:,:,:)=2.0_kind_real*xx(:,:,:)-1.0_kind_real
 
 return

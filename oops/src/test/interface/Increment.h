@@ -15,27 +15,17 @@
 #include <string>
 #include <cmath>
 
-// #if defined(_AIX) || defined(__AIX) || defined(__AIX__) || defined(__aix) || defined(__aix__)
-// # define PLATFORM_ID_AIX
-// #endif
-
 #define BOOST_TEST_NO_MAIN
 #define BOOST_TEST_ALTERNATIVE_INIT_API
 
-// #ifndef PLATFORM_ID_AIX
 #define BOOST_TEST_DYN_LINK
 #include <boost/test/unit_test.hpp>
-// #else
-// #include <boost/test/included/unit_test.hpp>
-// #endif
 
 #include <boost/noncopyable.hpp>
 #include <boost/scoped_ptr.hpp>
 
 #include "eckit/config/LocalConfiguration.h"
 #include "oops/runs/Test.h"
-#include "oops/base/ModelSpaceCovarianceBase.h"
-#include "oops/base/instantiateCovarFactory.h"
 #include "oops/interface/Geometry.h"
 #include "oops/interface/Increment.h"
 #include "oops/interface/State.h"
@@ -49,13 +39,11 @@ namespace test {
 // =============================================================================
 
 template <typename MODEL> class IncrementFixture : private boost::noncopyable {
-  typedef oops::ModelSpaceCovarianceBase<MODEL> Covariance_;
   typedef oops::Geometry<MODEL>       Geometry_;
   typedef oops::State<MODEL>          State_;
   typedef oops::Variables<MODEL>      Variables_;
 
  public:
-  static const Covariance_    & covariance() {return *getInstance().B_;}
   static const Geometry_      & resol()      {return *getInstance().resol_;}
   static const Variables_     & ctlvars()    {return *getInstance().ctlvars_;}
   static const util::DateTime & time()       {return *getInstance().time_;}
@@ -67,8 +55,6 @@ template <typename MODEL> class IncrementFixture : private boost::noncopyable {
   }
 
   IncrementFixture<MODEL>() {
-    oops::instantiateCovarFactory<MODEL>();
-
 //  Setup a geometry
     const eckit::LocalConfiguration resolConfig(TestEnvironment::config(), "Geometry");
     resol_.reset(new Geometry_(resolConfig));
@@ -80,17 +66,11 @@ template <typename MODEL> class IncrementFixture : private boost::noncopyable {
     const eckit::LocalConfiguration fgconf(TestEnvironment::config(), "State");
     State_ xx(*resol_, fgconf);
 
-//  Setup a B matrix
-    const eckit::LocalConfiguration covar(TestEnvironment::config(), "Covariance");
-    B_.reset(oops::CovarianceFactory<MODEL>::create(covar, *resol_, *ctlvars_, xx));
-    B_->linearize(xx, *resol_);
-
     time_.reset(new util::DateTime(xx.validTime()));
   }
 
   ~IncrementFixture<MODEL>() {}
 
-  boost::scoped_ptr<Covariance_>    B_;
   boost::scoped_ptr<Geometry_>      resol_;
   boost::scoped_ptr<Variables_>     ctlvars_;
   boost::scoped_ptr<util::DateTime> time_;
@@ -114,7 +94,8 @@ template <typename MODEL> void testIncrementCopyConstructor() {
   typedef oops::Increment<MODEL>    Increment_;
 
   Increment_ dx1(Test_::resol(), Test_::ctlvars(), Test_::time());
-  Test_::covariance().randomize(dx1);
+  dx1.random();
+  BOOST_CHECK(dx1.norm() > 0.0);
 
   Increment_ dx2(dx1);
   BOOST_CHECK(dx2.norm() > 0.0);
@@ -131,9 +112,9 @@ template <typename MODEL> void testIncrementTriangle() {
   typedef oops::Increment<MODEL>    Increment_;
 
   Increment_ dx1(Test_::resol(), Test_::ctlvars(), Test_::time());
-  Test_::covariance().randomize(dx1);
+  dx1.random();
   Increment_ dx2(Test_::resol(), Test_::ctlvars(), Test_::time());
-  Test_::covariance().randomize(dx2);
+  dx2.random();
 
 // test triangle inequality
   double dot1 = dx1.norm();
@@ -156,7 +137,7 @@ template <typename MODEL> void testIncrementOpPlusEq() {
   typedef oops::Increment<MODEL>    Increment_;
 
   Increment_ dx1(Test_::resol(), Test_::ctlvars(), Test_::time());
-  Test_::covariance().randomize(dx1);
+  dx1.random();
   Increment_ dx2(dx1);
 
 // test *= and +=
@@ -174,9 +155,9 @@ template <typename MODEL> void testIncrementDotProduct() {
   typedef oops::Increment<MODEL>    Increment_;
 
   Increment_ dx1(Test_::resol(), Test_::ctlvars(), Test_::time());
-  Test_::covariance().randomize(dx1);
+  dx1.random();
   Increment_ dx2(Test_::resol(), Test_::ctlvars(), Test_::time());
-  Test_::covariance().randomize(dx2);
+  dx2.random();
 
 // test symmetry of dot product
   double zz1 = dot_product(dx1, dx2);
@@ -192,7 +173,7 @@ template <typename MODEL> void testIncrementZero() {
   typedef oops::Increment<MODEL>    Increment_;
 
   Increment_ dx(Test_::resol(), Test_::ctlvars(), Test_::time());
-  Test_::covariance().randomize(dx);
+  dx.random();
   BOOST_CHECK(dx.norm() > 0.0);
 
 // test zero
@@ -207,7 +188,7 @@ template <typename MODEL> void testIncrementAxpy() {
   typedef oops::Increment<MODEL>    Increment_;
 
   Increment_ dx1(Test_::resol(), Test_::ctlvars(), Test_::time());
-  Test_::covariance().randomize(dx1);
+  dx1.random();
 
 // test axpy
   Increment_ dx2(dx1);

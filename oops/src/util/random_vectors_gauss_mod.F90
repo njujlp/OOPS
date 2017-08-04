@@ -11,14 +11,13 @@ module random_vectors_gauss_mod
 
 use, intrinsic :: iso_c_binding
 use kinds
+use random_cpp_mod
 
 implicit none
 private
 public :: random_vector_gauss
 
 ! ------------------------------------------------------------------------------
-
-integer, save, private :: iseed=0
 
 !> Fortran generic for generating random 1d, 2d and 3d arrays
 interface random_vector_gauss
@@ -36,23 +35,23 @@ implicit none
 integer(c_int), intent(in)    :: nn
 real(c_double), intent(inout) :: xx(nn)
 integer :: jj
-real(kind_real) :: zfac, ztwopi, zx(size(xx)+1)
+real(kind_real) :: zfac, ztwopi, zx(nn+1)
 
-iseed=iseed+1
-call random_seed(iseed)
-call random_number(zx)
+call random_cpp(xx)
 
-ztwopi = 8.0_kind_real*atan(1.0_kind_real)
-
-do jj=1,nn-1,2
-  zfac = sqrt(-2.0_kind_real*log(1.0_kind_real-zx(jj)))
-  xx(jj  ) = zfac*cos(ztwopi*zx(jj+1))
-  xx(jj+1) = zfac*sin(ztwopi*zx(jj+1))
-enddo
-if (mod(nn,2) /= 0) THEN
-  zfac = sqrt(-2.0_kind_real*log(1.0_kind_real-zx(nn)))
-  xx(nn) = zfac*cos(ztwopi*zx(nn+1))
-endif
+!call random_cpp(zx)
+!
+!ztwopi = 8.0_kind_real*atan(1.0_kind_real)
+!
+!do jj=1,nn-1,2
+!  zfac = sqrt(-2.0_kind_real*log(1.0_kind_real-zx(jj)))
+!  xx(jj  ) = zfac*cos(ztwopi*zx(jj+1))
+!  xx(jj+1) = zfac*sin(ztwopi*zx(jj+1))
+!enddo
+!if (mod(nn,2) /= 0) THEN
+!  zfac = sqrt(-2.0_kind_real*log(1.0_kind_real-zx(nn)))
+!  xx(nn) = zfac*cos(ztwopi*zx(nn+1))
+!endif
 
 return
 end subroutine c_random_vector_gauss
@@ -66,22 +65,22 @@ real(kind=kind_real), intent(inout) :: xx(:)
 integer :: jj, ilen
 real(kind_real) :: zfac, ztwopi, zx(size(xx)+1)
 
-iseed=iseed+1
-call random_seed(iseed)
-call random_number(zx)
+call random_cpp(xx)
 
-ztwopi = 8.0_kind_real*atan(1.0_kind_real)
-ilen=size(xx)
-
-do jj=1,ilen-1,2
-  zfac = sqrt(-2.0_kind_real*log(1.0_kind_real-zx(jj)))
-  xx(jj  ) = zfac*cos(ztwopi*zx(jj+1))
-  xx(jj+1) = zfac*sin(ztwopi*zx(jj+1))
-enddo
-if (mod(ilen,2) /= 0) THEN
-  zfac = sqrt(-2.0_kind_real*log(1.0_kind_real-zx(ilen)))
-  xx(ilen) = zfac*cos(ztwopi*zx(ilen+1))
-endif
+!call random_cpp(zx)
+!
+!ztwopi = 8.0_kind_real*atan(1.0_kind_real)
+!ilen=size(xx)
+!
+!do jj=1,ilen-1,2
+!  zfac = sqrt(-2.0_kind_real*log(1.0_kind_real-zx(jj)))
+!  xx(jj  ) = zfac*cos(ztwopi*zx(jj+1))
+!  xx(jj+1) = zfac*sin(ztwopi*zx(jj+1))
+!enddo
+!if (mod(ilen,2) /= 0) THEN
+!  zfac = sqrt(-2.0_kind_real*log(1.0_kind_real-zx(ilen)))
+!  xx(ilen) = zfac*cos(ztwopi*zx(ilen+1))
+!endif
 
 return
 end subroutine random_vector_gauss_1

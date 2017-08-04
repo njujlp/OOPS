@@ -32,6 +32,9 @@ util/ObjectCounter.h
 util/ObjectCountHelper.h
 util/ObjectCountHelper.cc
 util/Printable.h
+util/random_cpp_mod.F90
+util/random_cpp.h
+util/random_cpp.cc
 util/random_vector_f90.h
 util/random_vectors_mod.F90
 util/random_vectors_gauss_mod.F90

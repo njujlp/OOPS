@@ -11,6 +11,7 @@
 #include "lorenz95/ObsVec1D.h"
 
 #include <math.h>
+#include <random>
 
 #include <boost/foreach.hpp>
 
@@ -22,7 +23,6 @@
 #include "eckit/config/Configuration.h"
 #include "util/DateTime.h"
 #include "util/Duration.h"
-#include "util/random_vector_f90.h"
 
 namespace lorenz95 {
 // -----------------------------------------------------------------------------
@@ -90,7 +90,11 @@ void ObsVec1D::axpy(const double & zz, const ObsVec1D & rhs) {
 }
 // -----------------------------------------------------------------------------
 void ObsVec1D::random() {
-  util::random_vector_f90(data_.size(), &data_[0]);
+   const double stdev = 1.0;
+   const int seed = 2;
+   static std::default_random_engine generator(seed);
+   static std::normal_distribution<double> distribution(0.0, stdev);
+   for (int jj = 0; jj < data_.size(); ++jj) data_[jj] = distribution(generator);
 }
 // -----------------------------------------------------------------------------
 double ObsVec1D::dot_product_with(const ObsVec1D & other) const {
