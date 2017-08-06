@@ -5,21 +5,20 @@
  * which can be obtained at http://www.apache.org/licenses/LICENSE-2.0. 
  */
 
-#include "util/random_cpp.h"
+#include "model/random_f.h"
 #include <random>
 
 // -----------------------------------------------------------------------------
-namespace util {
+namespace qg {
 // -----------------------------------------------------------------------------
 
-void random_cpp(const int & nn, double & xx) {
+void random_f(const int & nn, double * xx) {
   static std::default_random_engine generator(7);
   static std::normal_distribution<double> distribution(0.0, 1.0);
-  xx = distribution(generator);
 
-//  for (int jj = 0; jj < nn; ++jj) xx[jj] = distribution(generator);
+  for (int jj = 0; jj < nn; ++jj) xx[jj] = distribution(generator);
 }
 
 // -----------------------------------------------------------------------------
 
-}  // namespace util
+}  // namespace qg

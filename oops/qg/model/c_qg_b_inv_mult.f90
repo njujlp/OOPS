@@ -11,7 +11,7 @@
 subroutine c_qg_b_inv_mult(c_key_conf, c_key_in, c_key_out) bind(c,name='qg_b_invmult_f90')
 
 use iso_c_binding
-use qg_3d_covar_configs
+use qg_covariance_mod
 use qg_fields
 use kinds
 

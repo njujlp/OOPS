@@ -5,13 +5,13 @@
  * which can be obtained at http://www.apache.org/licenses/LICENSE-2.0. 
  */
 
-#ifndef UTIL_RANDOM_CPP_H_
-#define UTIL_RANDOM_CPP_H_
+#ifndef QG_MODEL_RANDOM_F_H_
+#define QG_MODEL_RANDOM_F_H_
 
-namespace util {
+namespace qg {
 extern "C" {
-void random_cpp(const int &, double &);
+  void random_f(const int &, double *);
 }
-}  // namespace util
+}  // namespace qg
 
-#endif  // UTIL_RANDOM_CPP_H_
+#endif  // QG_MODEL_RANDOM_F_H_

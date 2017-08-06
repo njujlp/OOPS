@@ -18,7 +18,7 @@
 !! are solved with the standard back-substitution algorithm.
 
 subroutine solve_helmholz (x,b,c,nx,ny,deltax,deltay)
-
+use fft_mod
 use kinds
 implicit none
 
@@ -30,25 +30,18 @@ real(kind=kind_real), intent(in) :: c         !< Coefficient in the linear opera
 real(kind=kind_real), intent(in) :: deltax    !< Zonal grid spacing (non-dimensional)
 real(kind=kind_real), intent(in) :: deltay    !< Meridional grid spacing (non-dimensional)
 
-integer, dimension(13) :: ifax
-real(kind=kind_real) :: trigs(3*nx/2+1)
-real(kind=kind_real) :: work(ny*(nx+2))
 real(kind=kind_real) :: v(ny), z(ny), bext(nx+2,ny), xext(nx+2,ny)
 real(kind=kind_real) :: pi, am, bm, w
-integer k, i, iri
+integer :: k, i, iri, jj
 
 x(:,:) = 0.0_kind_real
 
 if (maxval(abs(b))>0.0_kind_real) then
 
-  !--- initialise the FFT
-  call set99 (trigs,ifax,nx)
-
   !--- transform
-
-  bext(1:nx,:)=b(:,:)
-  bext(nx+1:nx+2,:)=0.0_kind_real
-  call fft991 (bext,work,trigs,ifax,1,nx+2,nx,ny,-1)
+  do jj=1,ny
+    call fft_fwd(nx,b(:,jj),bext(:,jj))
+  enddo
 
   pi = 4.0_kind_real*atan(1.0_kind_real)
 
@@ -83,8 +76,9 @@ if (maxval(abs(b))>0.0_kind_real) then
   enddo
 
   !--- transform back
-  call fft991 (xext,work,trigs,ifax,1,nx+2,nx,ny,+1)
-  x(:,:) = xext(1:nx,:)
+  do jj=1,ny
+    call fft_inv(nx,xext(:,jj),x(:,jj))
+  enddo
 
 endif
 

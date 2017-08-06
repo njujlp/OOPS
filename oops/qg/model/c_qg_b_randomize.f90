@@ -11,9 +11,9 @@
 subroutine c_qg_b_randomize(c_key_conf, c_key_out) bind(c,name='qg_b_randomize_f90')
 
 use iso_c_binding
-use qg_3d_covar_configs
+use qg_covariance_mod
 use qg_fields
-use random_vectors_gauss_mod
+use random_vectors_mod
 use kinds
 
 implicit none
@@ -32,7 +32,7 @@ call qg_field_registry%get(c_key_out,xout)
 
 allocate(xctl(conf%nx, conf%ny, 2))
 
-call random_vector_gauss(xctl(:,:,:))
+call random_vector(xctl(:,:,:))
 call zeros(xout)
 call qg_3d_covar_sqrt_mult(conf%nx,conf%ny,xout,xctl,conf)
 

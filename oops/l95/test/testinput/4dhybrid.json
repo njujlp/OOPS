@@ -119,6 +119,7 @@
           "resol": "40"
         },
         "linearmodel": {
+          "version": "L95TLM",
           "tstep": "PT1H30M",
           "trajectory": {
             "tstep": "PT1H30M",
@@ -137,6 +138,7 @@
           "resol": "40"
         },
         "linearmodel": {
+          "version": "L95TLM",
           "tstep": "PT1H30M",
           "trajectory": {
             "tstep": "PT1H30M",
