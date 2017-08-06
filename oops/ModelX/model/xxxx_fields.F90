@@ -149,16 +149,16 @@ end subroutine zeros
 ! ------------------------------------------------------------------------------
 
 subroutine random(self)
-use random_vectors_gauss_mod
+use random_vectors_mod
 implicit none
 type(xxxx_field), intent(inout) :: self
 
 call check(self)
 
-call random_vector_gauss(self%gfld3d(:,:,:))
+call random_vector(self%gfld3d(:,:,:))
 if (self%lbc) then
-  call random_vector_gauss(self%xbound(:))
-  call random_vector_gauss(self%qbound(:,:))
+  call random_vector(self%xbound(:))
+  call random_vector(self%qbound(:,:))
 endif
 
 end subroutine random

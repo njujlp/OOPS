@@ -11,7 +11,6 @@ module random_vectors_mod
 
 use, intrinsic :: iso_c_binding
 use kinds
-use random_cpp_mod
 
 implicit none
 private
