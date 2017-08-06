@@ -13,7 +13,7 @@ use kinds
 use qg_constants
 use qg_geom_mod
 use config_mod
-use qg_3d_covar_configs
+use qg_covariance_mod
 
 ! ------------------------------------------------------------------------------
 contains

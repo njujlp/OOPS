@@ -63,6 +63,7 @@
           "resol": "40"
         },
         "linearmodel": {
+          "version": "identity",
           "tstep": "PT1H30M",
           "trajectory": {
             "tstep": "PT1H30M",

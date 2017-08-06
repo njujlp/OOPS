@@ -1,6 +1,7 @@
 list( APPEND l95_test_input
   testinput/3dvar.json
   testinput/3dfgat.json
+  testinput/4dvar.alpha.json
   testinput/4dvar.drgmresr.json
   testinput/4dvar.dripcg.json
   testinput/4dvar.dripcgqn.json
@@ -48,6 +49,7 @@ list( APPEND l95_testoutput
   testoutput/4dforcing.test
   testoutput/4dhybrid.test
   testoutput/4dsaddlepoint.test
+  testoutput/4dvar.alpha.test
   testoutput/4dvar.drgmresr.test
   testoutput/4dvar.dripcg.test
   testoutput/4dvar.dripcgqn.test
@@ -509,9 +511,9 @@ ecbuild_add_test( TARGET test_l95_4dvar_obsbias
 ecbuild_add_test( TARGET test_l95_3dfgat
                   TYPE SCRIPT
                   COMMAND "compare.sh"
-                  ARGS "${CMAKE_BINARY_DIR}/bin/l95_3dfgat.x testinput/3dfgat.json"
+                  ARGS "${CMAKE_BINARY_DIR}/bin/l95_4dvar.x testinput/3dfgat.json"
                        testoutput/3dfgat.test
-                  DEPENDS l95_3dfgat.x )
+                  DEPENDS l95_4dvar.x )
 
 if( ${OOPS_SENSITIVE_TESTS} )
 ecbuild_add_test( TARGET test_l95_genenspert
@@ -520,6 +522,13 @@ ecbuild_add_test( TARGET test_l95_genenspert
                   ARGS "${CMAKE_BINARY_DIR}/bin/l95_genpert.x testinput/genenspert.json"
                        testoutput/genenspert.test
                   DEPENDS l95_genpert.x )
+
+ecbuild_add_test( TARGET test_l95_alpha
+                  TYPE SCRIPT
+                  COMMAND "compare.sh"
+                  ARGS "${CMAKE_BINARY_DIR}/bin/l95_4dvar.x testinput/4dvar.alpha.json"
+                       testoutput/4dvar.alpha.test
+                  DEPENDS l95_4dvar.x )
 
 ecbuild_add_test( TARGET test_l95_4dvar_hybrid
                   TYPE SCRIPT

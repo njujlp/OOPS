@@ -2,6 +2,9 @@ list( APPEND qg_test_input
   testinput/3dvar.json
   testinput/3dfgat.json
   testinput/4densvar.json
+  testinput/4dvar.alpha.json
+  testinput/4dvar.nicas.json
+  testinput/4denvar.nicas.json
   testinput/4dforcing.json
   testinput/4dhybrid.json
   testinput/4dsaddlepoint.json
@@ -29,6 +32,9 @@ list( APPEND qg_testoutput
   testoutput/3dvar.test
   testoutput/3dfgat.test
   testoutput/4densvar.test
+  testoutput/4dvar.alpha.test
+  testoutput/4dvar.nicas.test
+  testoutput/4denvar.nicas.test
   testoutput/4dforcing.test
   testoutput/4dhybrid.test
   testoutput/4dsaddlepoint.test
@@ -254,9 +260,9 @@ ecbuild_add_test( TARGET test_qg_3dvar
 ecbuild_add_test( TARGET test_qg_3dfgat
                   TYPE SCRIPT
                   COMMAND "compare.sh"
-                  ARGS "${CMAKE_BINARY_DIR}/bin/qg_3dfgat.x testinput/3dfgat.json"
+                  ARGS "${CMAKE_BINARY_DIR}/bin/qg_4dvar.x testinput/3dfgat.json"
                        testoutput/3dfgat.test
-                  DEPENDS qg_3dfgat.x )
+                  DEPENDS qg_4dvar.x )
 
 ecbuild_add_test( TARGET test_qg_4dvar_drpcglmp
                   TYPE SCRIPT
@@ -336,6 +342,27 @@ ecbuild_add_test( TARGET test_qg_4densvar
                   COMMAND "compare.sh"
                   ARGS "${CMAKE_BINARY_DIR}/bin/qg_4dvar.x testinput/4densvar.json"
                        testoutput/4densvar.test
+                  DEPENDS qg_4dvar.x )
+
+ecbuild_add_test( TARGET test_qg_alpha
+                  TYPE SCRIPT
+                  COMMAND "compare.sh"
+                  ARGS "${CMAKE_BINARY_DIR}/bin/qg_4dvar.x testinput/4dvar.alpha.json"
+                       testoutput/4dvar.alpha.test
+                  DEPENDS qg_4dvar.x )
+
+ecbuild_add_test( TARGET test_qg_nicas
+                  TYPE SCRIPT
+                  COMMAND "compare.sh"
+                  ARGS "${CMAKE_BINARY_DIR}/bin/qg_4dvar.x testinput/4dvar.nicas.json"
+                       testoutput/4dvar.nicas.test
+                  DEPENDS qg_4dvar.x )
+
+ecbuild_add_test( TARGET test_qg_4denvar_nicas
+                  TYPE SCRIPT
+                  COMMAND "compare.sh"
+                  ARGS "${CMAKE_BINARY_DIR}/bin/qg_4dvar.x testinput/4denvar.nicas.json"
+                       testoutput/4denvar.nicas.test
                   DEPENDS qg_4dvar.x )
 endif()
 

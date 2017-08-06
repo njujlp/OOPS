@@ -12,7 +12,7 @@ subroutine c_qg_b_setup(c_key_conf, c_model, c_key_geom) &
           & bind (c,name='qg_b_setup_f90')
 
 use iso_c_binding
-use qg_3d_covar_configs
+use qg_covariance_mod
 use qg_geom_mod
 
 implicit none
