@@ -19,12 +19,12 @@ if __name__ == '__main__':
     try:
         namespace=sys.argv[1]      # Replacement for xxxx
         NAMESPACE=sys.argv[2]      # Replacement for XXXX
-        wildc=sys.argv[3]          # Wild card (*.cc, *.f90, ...) 
+#       wildc=sys.argv[3]          # Wild card (*.cc, *.f90, ...) 
     except:
         print 'Usage example: template2model.py mom5cice5 MOM5CICE5 *.c'
         sys.exit("Error: Wrong arguments")
 
-    flist=glob.glob(wildc)
+    flist=glob.glob("*.*")
     for fname in flist:
         print fname
         if (fname!=sys.argv[0]):
