@@ -13,13 +13,14 @@
 #include <cmath>
 #include <limits>
 #include <fstream>
-#include <stdlib.h>    /* srand, rand */
+#include <random>
 #include <string>
 
 #include "lorenz95/GomL95.h"
 #include "lorenz95/LocsL95.h"
 #include "lorenz95/Resolution.h"
-#include "util/random_vector_f90.h"
+#include "oops/generic/UnstructuredGrid.h"
+#include "util/abor1_cpp.h"
 
 // -----------------------------------------------------------------------------
 namespace lorenz95 {
@@ -103,12 +104,11 @@ void FieldL95::schur(const FieldL95 & rhs) {
 }
 // -----------------------------------------------------------------------------
 void FieldL95::random() {
-// #include <random>
-//   const double stdev = 1.0;
-//   static std::default_random_engine generator;
-//   static std::normal_distribution<double> distribution(0.0, stdev);
-//   for (int jj = 0; jj < resol_; ++jj) x_[jj] = distribution(generator);
-  util::random_vector_gauss_f90(x_.size(), &x_[0]);
+  const double stdev = 1.0;
+  const int seed = 1;
+  static std::default_random_engine generator(seed);
+  static std::normal_distribution<double> distribution(0.0, stdev);
+  for (int jj = 0; jj < resol_; ++jj) x_[jj] = distribution(generator);
 }
 // -----------------------------------------------------------------------------
 void FieldL95::interp(const LocsL95 & locs, GomL95 & gom) const {
@@ -132,6 +132,14 @@ void FieldL95::interpAD(const LocsL95 & locs, const GomL95 & gom) {
     if (ii == resol_) ii = 0;
     x_[ii] += gom[gom.current()+jobs];
   }
+}
+// -----------------------------------------------------------------------------
+void FieldL95::convert_to(oops::UnstructuredGrid & ug) const {
+  ABORT("FieldL95 conversion to unstructured grid not implemented.");
+}
+// -----------------------------------------------------------------------------
+void FieldL95::convert_from(const oops::UnstructuredGrid & ug) {
+  ABORT("FieldL95 conversion from unstructured grid not implemented.");
 }
 // -----------------------------------------------------------------------------
 void FieldL95::read(std::ifstream & fin) {

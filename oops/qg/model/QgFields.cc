@@ -15,14 +15,15 @@
 #include <string>
 #include <vector>
 
-#include "util/Logger.h"
+#include "eckit/config/Configuration.h"
 #include "model/GomQG.h"
 #include "model/LocQG.h"
 #include "model/QgFortran.h"
 #include "model/QgGeometry.h"
 #include "model/VarQG.h"
-#include "eckit/config/Configuration.h"
+#include "oops/generic/UnstructuredGrid.h"
 #include "util/DateTime.h"
+#include "util/Logger.h"
 
 // -----------------------------------------------------------------------------
 namespace qg {
@@ -140,6 +141,14 @@ void QgFields::add(const QgFields & rhs) {
 // -----------------------------------------------------------------------------
 void QgFields::diff(const QgFields & x1, const QgFields & x2) {
   qg_field_diff_incr_f90(keyFlds_, x1.keyFlds_, x2.keyFlds_);
+}
+// -----------------------------------------------------------------------------
+void QgFields::convert_to(oops::UnstructuredGrid & ug) const {
+  qg_field_convert_to_f90(keyFlds_, ug.toFortran());
+}
+// -----------------------------------------------------------------------------
+void QgFields::convert_from(const oops::UnstructuredGrid & ug) {
+  qg_field_convert_from_f90(keyFlds_, ug.toFortran());
 }
 // -----------------------------------------------------------------------------
 void QgFields::read(const eckit::Configuration & config) {

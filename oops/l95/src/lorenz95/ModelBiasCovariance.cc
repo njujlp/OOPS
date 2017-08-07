@@ -12,8 +12,7 @@
 
 #include <cmath>
 #include <iostream>
-// #include <random>
-#include <stdlib.h>     /* srand, rand */
+#include <random>
 #include <string>
 
 #include "util/Logger.h"
@@ -58,12 +57,10 @@ void ModelBiasCovariance::inverseMultiply(const ModelBiasCorrection & dxin,
 }
 // -----------------------------------------------------------------------------
 void ModelBiasCovariance::randomize(ModelBiasCorrection & dx) const {
-//  const double stdev = std::sqrt(variance_);
-//  std::default_random_engine generator;
-//  std::normal_distribution<double> distribution(0.0, stdev);
-//  dx = distribution(generator);
-  double zz = static_cast<double>(std::rand()) / RAND_MAX;
-  dx.bias() = zz * std::sqrt(variance_);
+  const double stdev = std::sqrt(variance_);
+  static std::default_random_engine generator(3);
+  static std::normal_distribution<double> distribution(0.0, stdev);
+  dx.bias() = distribution(generator);
 }
 // -----------------------------------------------------------------------------
 void ModelBiasCovariance::print(std::ostream & os) const {

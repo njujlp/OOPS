@@ -1,3 +1,9 @@
+/*
+ * (C) Copyright 2017 UCAR
+ *
+ * This software is licensed under the terms of the Apache Licence Version 2.0
+ * which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+ */
 
 #ifndef XXXX_MODEL_XXXXINCREMENT_H_
 #define XXXX_MODEL_XXXXINCREMENT_H_
@@ -19,6 +25,10 @@
 
 namespace eckit {
   class Configuration;
+}
+
+namespace oops {
+  class UnstructuredGrid;
 }
 
 namespace xxxx {
@@ -63,6 +73,10 @@ class Increment : public oops::GeneralizedDepartures,
 /// Interpolate to observation location
 //  void interpolateTL(const LocQG &, GomQG &) const;
 //  void interpolateAD(const LocQG &, const GomQG &);
+
+/// Convert to/from generic unstructured grid
+  void convert_to(oops::UnstructuredGrid &) const;
+  void convert_from(const oops::UnstructuredGrid &);
 
 /// I/O and diagnostics
   void read(const eckit::Configuration &);

@@ -25,6 +25,10 @@ namespace eckit {
   class Configuration;
 }
 
+namespace oops {
+  class UnstructuredGrid;
+}
+
 namespace qg {
   class GomQG;
   class LocQG;
@@ -67,6 +71,10 @@ class QgState : public util::Printable,
   double norm() const {return fields_->norm();}
   const util::DateTime & validTime() const {return fields_->time();}
   util::DateTime & validTime() {return fields_->time();}
+
+/// Convert to/from unstructured grid
+  void convert_to(oops::UnstructuredGrid &) const;
+  void convert_from(const oops::UnstructuredGrid &);
 
 /// Access to fields
   QgFields & fields() {return *fields_;}

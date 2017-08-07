@@ -15,7 +15,6 @@
 
 #include "model/GomQG.h"
 #include "model/LinearObsOp.h"
-#include "model/LocalizationMatrixQG.h"
 #include "model/LocQG.h"
 #include "model/ModelBias.h"
 #include "model/ModelBiasIncrement.h"
@@ -31,14 +30,13 @@
 #include "model/QgModel.h"
 #include "model/QgObservation.h"
 #include "model/QgState.h"
-#include "model/QgTLM.h"
 #include "model/VarQG.h"
 
 namespace qg {
 
 struct QgTraits {
   static std::string name() {return "QG";}
-  static const std::string nameCovar;
+  static std::string nameCovar() {return "QgError";}
 
   typedef qg::QgGeometry            Geometry;
   typedef qg::VarQG                 Variables;
@@ -46,7 +44,6 @@ struct QgTraits {
   typedef qg::QgState               State;
   typedef qg::QgModel               Model;
   typedef qg::QgIncrement           Increment;
-  typedef qg::QgTLM                 LinearModel;
   typedef qg::QgErrorCovariance     Covariance;
 
   typedef qg::ModelBias             ModelAuxControl;
@@ -64,11 +61,7 @@ struct QgTraits {
 
   typedef qg::GomQG                 ModelAtLocations;
   typedef qg::LocQG                 Locations;
-
-  typedef qg::LocalizationMatrixQG  LocalizationMatrix;
 };
-
-const std::string QgTraits::nameCovar = "QgError";
 
 }  // namespace qg
 

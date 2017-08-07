@@ -1,0 +1,22 @@
+Test     : CostJb   : Nonlinear Jb = 0
+Test     : CostJo   : Nonlinear Jo = 18995.5, nobs = 800, Jo/n = 23.7443, err = 0.4
+Test     : CostJo   : Nonlinear Jo = 2093.12, nobs = 800, Jo/n = 2.6164, err = 0.6
+Test     : CostJo   : Nonlinear Jo = 287.248, nobs = 400, Jo/n = 0.718119, err = 1.2
+Test     : CostJcDFI: Nonlinear Jc = 16.1046
+Test     : CostFunction: Nonlinear J = 21391.9
+Test     : DRPLanczosMinimizer: reduction in residual norm = 0.0171051
+Test     : CostFunction::addIncrement: Analysis norm: 14.6027
+Test     : CostJb   : Nonlinear Jb = 20.2778
+Test     : CostJo   : Nonlinear Jo = 2381.64, nobs = 800, Jo/n = 2.97705, err = 0.4
+Test     : CostJo   : Nonlinear Jo = 355.603, nobs = 800, Jo/n = 0.444504, err = 0.6
+Test     : CostJo   : Nonlinear Jo = 43.0281, nobs = 400, Jo/n = 0.10757, err = 1.2
+Test     : CostJcDFI: Nonlinear Jc = 32.5919
+Test     : CostFunction: Nonlinear J = 2833.14
+Test     : DRPLanczosMinimizer: reduction in residual norm = 0.0252035
+Test     : CostFunction::addIncrement: Analysis norm: 14.6278
+Test     : CostJb   : Nonlinear Jb = 24.1273
+Test     : CostJo   : Nonlinear Jo = 202.632, nobs = 800, Jo/n = 0.25329, err = 0.4
+Test     : CostJo   : Nonlinear Jo = 93.7641, nobs = 800, Jo/n = 0.117205, err = 0.6
+Test     : CostJo   : Nonlinear Jo = 16.5698, nobs = 400, Jo/n = 0.0414244, err = 1.2
+Test     : CostJcDFI: Nonlinear Jc = 40.5575
+Test     : CostFunction: Nonlinear J = 377.651

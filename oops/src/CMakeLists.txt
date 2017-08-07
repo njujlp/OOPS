@@ -32,9 +32,6 @@ util/ObjectCounter.h
 util/ObjectCountHelper.h
 util/ObjectCountHelper.cc
 util/Printable.h
-util/random_vector_f90.h
-util/random_vectors_mod.F90
-util/random_vectors_gauss_mod.F90
 util/set_err_trap.F90
 util/signal_trap.c
 util/string_f_c_mod.F90
@@ -148,8 +145,15 @@ oops/base/WeightingFct.h
 oops/base/WeightingFct.cc
 oops/base/instantiateCovarFactory.h
 
+oops/generic/LocalizationNICAS.h
 oops/generic/ObsErrorDiag.h
+oops/generic/UnstructuredGrid.cc
+oops/generic/UnstructuredGrid.h
+oops/generic/column_data_mod.F90
+oops/generic/instantiateLocalizationFactory.h
 oops/generic/instantiateObsErrorFactory.h
+oops/generic/unstructured_grid_f.h
+oops/generic/unstructured_grid_mod.F90
 
 oops/interface/ErrorCovariance.h
 oops/interface/Geometry.h
@@ -157,6 +161,7 @@ oops/interface/Increment.h
 oops/interface/LinearModel.h
 oops/interface/LinearObsOperator.h
 oops/interface/Localization.h
+oops/interface/LocalizationBase.h
 oops/interface/Locations.h
 oops/interface/Model.h
 oops/interface/ModelAtLocations.h

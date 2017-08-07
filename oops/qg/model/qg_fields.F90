@@ -25,7 +25,10 @@ public :: qg_field, &
         & self_add, self_schur, self_sub, self_mul, axpy, &
         & dot_prod, add_incr, diff_incr, &
         & read_file, write_file, gpnorm, fldrms, &
-        & change_resol, interp_tl, interp_ad
+        & change_resol, interp_tl, interp_ad, convert_to_ug, convert_from_ug
+
+! ------------------------------------------------------------------------------
+
 public :: qg_field_registry
 
 ! ------------------------------------------------------------------------------
@@ -48,7 +51,7 @@ type :: qg_field
   real(kind=kind_real), pointer :: qbound(:,:)      !< PV on walls
   real(kind=kind_real), pointer :: q_north(:,:)     !< PV on northern wall
   real(kind=kind_real), pointer :: q_south(:,:)     !< PV on southern wall
-  character(len=1), allocatable :: fldnames(:) !< Variable identifiers
+  character(len=1), allocatable :: fldnames(:)      !< Variable identifiers
 end type qg_field
 
 #define LISTED_TYPE qg_field
@@ -158,16 +161,16 @@ end subroutine zeros
 ! ------------------------------------------------------------------------------
 
 subroutine random(self)
-use random_vectors_gauss_mod
+use random_vectors_mod
 implicit none
 type(qg_field), intent(inout) :: self
 
 call check(self)
 
-call random_vector_gauss(self%gfld3d(:,:,:))
+call random_vector(self%gfld3d(:,:,:))
 if (self%lbc) then
-  call random_vector_gauss(self%xbound(:))
-  call random_vector_gauss(self%qbound(:,:))
+  call random_vector(self%xbound(:))
+  call random_vector(self%qbound(:,:))
 endif
 
 end subroutine random
@@ -453,7 +456,7 @@ subroutine read_file(fld, c_conf, vdate)
 ! Needs more interface clean-up here...
 use iso_c_binding
 use datetime_mod
-use fckit_log_module, only : log
+use fckit_log_module, only : fckit_log
 
 implicit none
 type(qg_field), intent(inout) :: fld      !< Fields
@@ -476,32 +479,32 @@ if (config_element_exists(c_conf,"read_from_file")) then
   iread = config_get_int(c_conf,"read_from_file")
 endif
 if (iread==0) then
-  call log%warning("qg_fields:read_file: Inventing State")
+  call fckit_log%warning("qg_fields:read_file: Inventing State")
   call invent_state(fld,c_conf)
   sdate = config_get_string(c_conf,len(sdate),"date")
   WRITE(buf,*) 'validity date is: '//sdate
-  call log%info(buf)
+  call fckit_log%info(buf)
   call datetime_set(sdate, vdate)
 else
   call zeros(fld)
   filename = config_get_string(c_conf,len(filename),"filename")
   WRITE(buf,*) 'qg_field:read_file: opening '//filename
-  call log%info(buf)
+  call fckit_log%info(buf)
   open(unit=iunit, file=trim(filename), form='formatted', action='read')
 
   read(iunit,*) ix, iy, il, ic, is
   if (ix /= fld%nx .or. iy /= fld%ny .or. il /= fld%nl) then
     write (record,*) "qg_fields:read_file: ", &
                    & "input fields have wrong dimensions: ",ix,iy,il
-    call log%error(record)
+    call fckit_log%error(record)
     write (record,*) "qg_fields:read_file: expected: ",fld%nx,fld%ny,fld%nl
-    call log%error(record)
+    call fckit_log%error(record)
     call abor1_ftn("qg_fields:read_file: input fields have wrong dimensions")
   endif
 
   read(iunit,*) sdate
   WRITE(buf,*) 'validity date is: '//sdate
-  call log%info(buf)
+  call fckit_log%info(buf)
   call datetime_set(sdate, vdate)
 
   if (fld%nx>9999)  call abor1_ftn("Format too small")
@@ -545,7 +548,7 @@ end subroutine read_file
 subroutine write_file(fld, c_conf, vdate)
 use iso_c_binding
 use datetime_mod
-use fckit_log_module, only : log
+use fckit_log_module, only : fckit_log
 
 implicit none
 type(qg_field), intent(in) :: fld    !< Fields
@@ -566,7 +569,7 @@ call check(fld)
 
 filename = genfilename(c_conf,max_string_length,vdate)
 WRITE(buf,*) 'qg_field:write_file: writing '//filename
-call log%info(buf)
+call fckit_log%info(buf)
 open(unit=iunit, file=trim(filename), form='formatted', action='write')
 
 is=0
@@ -875,6 +878,60 @@ k2=ii+2
 
 return
 end subroutine lin_weights
+
+! ------------------------------------------------------------------------------
+
+subroutine convert_to_ug(self, ug)
+use unstructured_grid_mod
+implicit none
+type(qg_field), intent(in) :: self
+type(unstructured_grid), intent(inout) :: ug
+real(kind=kind_real) :: xlat, xlon, dx, dy, zz(2)
+integer :: jx,jy
+
+zz(1) = 0.0
+zz(2) = 1.0
+call create_unstructured_grid(ug, 2, zz)
+
+dx=360.0_kind_real/real(self%nx,kind_real)
+dy=40.0_kind_real/real(self%ny,kind_real)
+
+do jy=1,self%ny
+  xlat = (jy-1) * dy
+  do jx=1,self%nx
+    xlon = (jx-1) * dx
+    call add_column(ug, xlat, xlon, 2, 1, 0)
+    ug%last%column%cols(1) = self%x(jx,jy,1)
+    ug%last%column%cols(2) = self%x(jx,jy,2)
+  enddo
+enddo
+
+end subroutine convert_to_ug
+
+! ------------------------------------------------------------------------------
+
+subroutine convert_from_ug(self, ug)
+use unstructured_grid_mod
+implicit none
+type(qg_field), intent(inout) :: self
+type(unstructured_grid), intent(in) :: ug
+type(column_element), pointer :: current
+real(kind=kind_real) :: dx, dy
+integer :: jx,jy
+
+dx=360.0_kind_real/real(self%nx,kind_real)
+dy=40.0_kind_real/real(self%ny,kind_real)
+
+current => ug%head
+do while (associated(current))
+  jy = nint(current%column%lat / dy) + 1
+  jx = nint(current%column%lon / dx) + 1
+  self%x(jx,jy,1) = current%column%cols(1)
+  self%x(jx,jy,2) = current%column%cols(2)
+  current => current%next
+enddo
+
+end subroutine convert_from_ug
 
 ! ------------------------------------------------------------------------------
 
