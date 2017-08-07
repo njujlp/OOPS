@@ -39,12 +39,14 @@
     "tolerance": "1.0e-8"
   },
   "Localization": {
+    "localization": "L95",
     "length_scale": "1.0"
   },
   "ModelBiasCovariance": {
     "standard_deviation": "1.0"
   },
   "LinearModel": {
+    "version": "L95TLM",
     "tstep": "PT1H30M",
     "trajectory": {
       "tstep": "PT1H30M",

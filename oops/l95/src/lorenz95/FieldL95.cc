@@ -13,13 +13,12 @@
 #include <cmath>
 #include <limits>
 #include <fstream>
-#include <stdlib.h>    /* srand, rand */
+#include <random>
 #include <string>
 
 #include "lorenz95/GomL95.h"
 #include "lorenz95/LocsL95.h"
 #include "lorenz95/Resolution.h"
-#include "util/random_vector_f90.h"
 
 // -----------------------------------------------------------------------------
 namespace lorenz95 {
@@ -103,12 +102,11 @@ void FieldL95::schur(const FieldL95 & rhs) {
 }
 // -----------------------------------------------------------------------------
 void FieldL95::random() {
-// #include <random>
-//   const double stdev = 1.0;
-//   static std::default_random_engine generator;
-//   static std::normal_distribution<double> distribution(0.0, stdev);
-//   for (int jj = 0; jj < resol_; ++jj) x_[jj] = distribution(generator);
-  util::random_vector_gauss_f90(x_.size(), &x_[0]);
+  const double stdev = 1.0;
+  const int seed = 1;
+  static std::default_random_engine generator(seed);
+  static std::normal_distribution<double> distribution(0.0, stdev);
+  for (int jj = 0; jj < resol_; ++jj) x_[jj] = distribution(generator);
 }
 // -----------------------------------------------------------------------------
 void FieldL95::interp(const LocsL95 & locs, GomL95 & gom) const {
