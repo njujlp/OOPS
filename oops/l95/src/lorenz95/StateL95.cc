@@ -13,8 +13,9 @@
 #include <fstream>
 #include <string>
 
-#include "util/Logger.h"
 #include "eckit/config/Configuration.h"
+#include "oops/generic/UnstructuredGrid.h"
+#include "util/Logger.h"
 #include "util/DateTime.h"
 #include "util/Duration.h"
 #include "util/abor1_cpp.h"
@@ -27,8 +28,6 @@
 #include "lorenz95/ModelL95.h"
 #include "lorenz95/ModelTrajectory.h"
 #include "lorenz95/Resolution.h"
-
-
 
 using oops::Log;
 
@@ -88,6 +87,16 @@ StateL95 & StateL95::operator+=(const IncrementL95 & dx) {
   ASSERT(time_ == dx.validTime());
   fld_ += dx.getField();
   return *this;
+}
+// -----------------------------------------------------------------------------
+/// Convert to/from unstructured grid
+// -----------------------------------------------------------------------------
+void StateL95::convert_to(oops::UnstructuredGrid & ug) const {
+  fld_.convert_to(ug);
+}
+// -----------------------------------------------------------------------------
+void StateL95::convert_from(const oops::UnstructuredGrid & ug) {
+  fld_.convert_from(ug);
 }
 // -----------------------------------------------------------------------------
 /// Utilities

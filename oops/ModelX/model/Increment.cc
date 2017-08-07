@@ -1,3 +1,9 @@
+/*
+ * (C) Copyright 2017 UCAR
+ *
+ * This software is licensed under the terms of the Apache Licence Version 2.0
+ * which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+ */
 
 #include "model/Increment.h"
 
@@ -5,13 +11,14 @@
 #include <string>
 
 #include "eckit/config/LocalConfiguration.h"
-#include "util/Logger.h"
+#include "oops/generic/UnstructuredGrid.h"
 #include "model/Fields.h"
 #include "model/Geometry.h"
 #include "model/State.h"
 #include "model/Variables.h"
 #include "util/DateTime.h"
 #include "util/Duration.h"
+#include "util/Logger.h"
 
 using oops::Log;
 
@@ -133,6 +140,16 @@ double Increment::dot_product_with(const Increment & other) const {
 // -----------------------------------------------------------------------------
 void Increment::random() {
   fields_->random();
+}
+// -----------------------------------------------------------------------------
+/// Convert to/from unstructured grid
+// -----------------------------------------------------------------------------
+void Increment::convert_to(oops::UnstructuredGrid & ug) const {
+  fields_->convert_to(ug);
+}
+// -----------------------------------------------------------------------------
+void Increment::convert_from(const oops::UnstructuredGrid & ug) {
+  fields_->convert_from(ug);
 }
 // -----------------------------------------------------------------------------
 /// I/O and diagnostics

@@ -14,7 +14,6 @@
 #include <string>
 
 #include "eckit/config/LocalConfiguration.h"
-#include "util/Logger.h"
 #include "model/GomQG.h"
 #include "model/LocQG.h"
 #include "model/ModelBiasIncrement.h"
@@ -23,11 +22,12 @@
 #include "model/QgGeometry.h"
 #include "model/QgState.h"
 #include "model/VarQG.h"
+#include "oops/generic/UnstructuredGrid.h"
 #include "util/DateTime.h"
 #include "util/Duration.h"
+#include "util/Logger.h"
 
 using oops::Log;
-
 
 namespace qg {
 
@@ -152,17 +152,21 @@ void QgIncrement::random() {
 /// Interpolate to observation location
 // -----------------------------------------------------------------------------
 void QgIncrement::interpolateTL(const LocQG & locs, GomQG & cols) const {
-  Log::debug() << "QgIncrement::interpolateTL fields in" << *fields_ << std::endl;
   fields_->interpolateTL(locs, cols);
-  Log::debug() << "QgIncrement::interpolateTL fields out" << *fields_ << std::endl;
-  Log::debug() << "QgIncrement::interpolateTL gom " << cols << std::endl;
 }
 // -----------------------------------------------------------------------------
 void QgIncrement::interpolateAD(const LocQG & locs, const GomQG & cols) {
-  Log::debug() << "QgIncrement::interpolateAD gom " << cols << std::endl;
-  Log::debug() << "QgIncrement::interpolateAD fields in" << *fields_ << std::endl;
   fields_->interpolateAD(locs, cols);
-  Log::debug() << "QgIncrement::interpolateAD fields out" << *fields_ << std::endl;
+}
+// -----------------------------------------------------------------------------
+/// Convert to/from unstructured grid
+// -----------------------------------------------------------------------------
+void QgIncrement::convert_to(oops::UnstructuredGrid & ug) const {
+  fields_->convert_to(ug);
+}
+// -----------------------------------------------------------------------------
+void QgIncrement::convert_from(const oops::UnstructuredGrid & ug) {
+  fields_->convert_from(ug);
 }
 // -----------------------------------------------------------------------------
 /// I/O and diagnostics

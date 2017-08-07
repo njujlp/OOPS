@@ -1,3 +1,9 @@
+/*
+ * (C) Copyright 2017 UCAR
+ *
+ * This software is licensed under the terms of the Apache Licence Version 2.0
+ * which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+ */
 
 #include "model/Fields.h"
 
@@ -6,12 +12,14 @@
 #include <string>
 #include <vector>
 
-#include "util/Logger.h"
+#include "eckit/config/Configuration.h"
+#include "oops/generic/UnstructuredGrid.h"
 #include "model/Fortran.h"
 #include "model/Geometry.h"
 #include "model/Variables.h"
-#include "eckit/config/Configuration.h"
 #include "util/DateTime.h"
+#include "util/Logger.h"
+#include "util/abor1_cpp.h"
 
 // -----------------------------------------------------------------------------
 namespace xxxx {
@@ -117,6 +125,14 @@ void Fields::add(const Fields & rhs) {
 // -----------------------------------------------------------------------------
 void Fields::diff(const Fields & x1, const Fields & x2) {
   xxxx_field_diff_incr_f90(keyFlds_, x1.keyFlds_, x2.keyFlds_);
+}
+// -----------------------------------------------------------------------------
+void Fields::convert_to(oops::UnstructuredGrid & ug) const {
+  ABORT("ModelX:Fields conversion to unstructured grid not implemented.");
+}
+// -----------------------------------------------------------------------------
+void Fields::convert_from(const oops::UnstructuredGrid & ug) {
+  ABORT("ModelX:Fields conversion from unstructured grid not implemented.");
 }
 // -----------------------------------------------------------------------------
 void Fields::read(const eckit::Configuration & config) {

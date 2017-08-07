@@ -16,6 +16,7 @@
 #include <boost/scoped_ptr.hpp>
 
 #include "oops/base/PostProcessor.h"
+#include "oops/generic/UnstructuredGrid.h"
 #include "oops/interface/Geometry.h"
 #include "oops/interface/Locations.h"
 #include "oops/interface/ModelAtLocations.h"
@@ -69,6 +70,10 @@ class State : public util::Printable,
   void write(const eckit::Configuration &) const;
   double norm() const;
   Geometry_ geometry() const;
+
+/// Convert to/from generic unstructured grid
+  void convert_to(UnstructuredGrid &) const;
+  void convert_from(const UnstructuredGrid &);
 
  protected:
 /// Protected methods are for Accumulator. Could we find a better design?
@@ -155,6 +160,26 @@ void State<MODEL>::interpolate(const Locations_ & locs, ModelAtLocations_ & gom)
   util::Timer timer(classname(), "interpolate");
   state_->interpolate(locs.locations(), gom.modelatlocations());
   Log::trace() << "State<MODEL>::interpolate done" << std::endl;
+}
+
+// -----------------------------------------------------------------------------
+
+template<typename MODEL>
+void State<MODEL>::convert_to(UnstructuredGrid & ug) const {
+  Log::trace() << "State<MODEL>::convert_to starting" << std::endl;
+  util::Timer timer(classname(), "convert_to");
+  state_->convert_to(ug);
+  Log::trace() << "State<MODEL>::convert_to done" << std::endl;
+}
+
+// -----------------------------------------------------------------------------
+
+template<typename MODEL>
+void State<MODEL>::convert_from(const UnstructuredGrid & ug) {
+  Log::trace() << "State<MODEL>::convert_from starting" << std::endl;
+  util::Timer timer(classname(), "convert_from");
+  state_->convert_from(ug);
+  Log::trace() << "State<MODEL>::convert_from done" << std::endl;
 }
 
 // -----------------------------------------------------------------------------
