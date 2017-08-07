@@ -8,13 +8,10 @@
  * does it submit to any jurisdiction.
  */
 
-#ifndef OOPS_INTERFACE_LINEARMODELID_H_
-#define OOPS_INTERFACE_LINEARMODELID_H_
+#ifndef OOPS_GENERIC_LINEARMODELID_H_
+#define OOPS_GENERIC_LINEARMODELID_H_
 
 #include <string>
-
-#include <boost/noncopyable.hpp>
-#include <boost/scoped_ptr.hpp>
 
 #include "util/Logger.h"
 #include "oops/interface/Geometry.h"
@@ -155,4 +152,4 @@ void LinearModelId<MODEL>::finalizeAD(Increment_ & dx) const {
 // -----------------------------------------------------------------------------
 }  // namespace oops
 
-#endif  // OOPS_INTERFACE_LINEARMODELID_H_
+#endif  // OOPS_GENERIC_LINEARMODELID_H_

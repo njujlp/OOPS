@@ -1,3 +1,9 @@
+/*
+ * (C) Copyright 2017 UCAR
+ *
+ * This software is licensed under the terms of the Apache Licence Version 2.0
+ * which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+ */
 
 #ifndef XXXX_MODEL_XXXXFIELDS_H_
 #define XXXX_MODEL_XXXXFIELDS_H_
@@ -17,6 +23,10 @@
 // Forward declarations
 namespace eckit {
   class Configuration;
+}
+
+namespace oops {
+  class UnstructuredGrid;
 }
 
 namespace xxxx {
@@ -56,6 +66,10 @@ class Fields : public util::Printable,
   void changeResolution(const Fields &);
   void add(const Fields &);
   void diff(const Fields &, const Fields &);
+
+// Convert to/from generic unstructured grid
+  void convert_to(oops::UnstructuredGrid &) const;
+  void convert_from(const oops::UnstructuredGrid &);
 
 // Utilities
   void read(const eckit::Configuration &);

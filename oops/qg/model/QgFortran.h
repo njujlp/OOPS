@@ -91,6 +91,8 @@ extern "C" {
                               const int & keyGoms);
   void qg_field_interp_ad_f90(const int & keyFlds, const int &,
                               const int & keyGoms);
+  void qg_field_convert_to_f90(const int &, const int &);
+  void qg_field_convert_from_f90(const int &, const int &);
 
   void qg_field_gpnorm_f90(const int & keyFlds, const int &, double &);
   void qg_field_sizes_f90(const int & keyFlds, int &, int &, int &, int &);

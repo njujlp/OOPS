@@ -1,3 +1,9 @@
+/*
+ * (C) Copyright 2017 UCAR
+ *
+ * This software is licensed under the terms of the Apache Licence Version 2.0
+ * which can be obtained at http://www.apache.org/licenses/LICENSE-2.0.
+ */
 
 #ifndef XXXX_MODEL_XXXXSTATE_H_
 #define XXXX_MODEL_XXXXSTATE_H_
@@ -14,6 +20,10 @@
 
 namespace eckit {
   class Configuration;
+}
+
+namespace oops {
+  class UnstructuredGrid;
 }
 
 namespace xxxx {
@@ -49,6 +59,10 @@ class State : public util::Printable,
 
 /// Interactions with Increment
   State & operator+=(const Increment &);
+
+/// Convert to/from generic unstructured grid
+  void convert_to(oops::UnstructuredGrid &) const;
+  void convert_from(const oops::UnstructuredGrid &);
 
 /// I/O and diagnostics
   void read(const eckit::Configuration &);
