@@ -74,8 +74,8 @@ find_package( LibXml2 REQUIRED )
 include_directories( ${LIBXML2_INCLUDE_DIR} )
 
 # netcdf
-#find_package( NetCDF3 REQUIRED )
-#include_directories( ${NETCDF_INCLUDE_DIR} )
+find_package( NetCDF3 REQUIRED )
+include_directories( ${NETCDF_INCLUDE_DIR} )
 #set (LINKER_FLAGS "-L${NETCDF} -Wl,-rpath,-I/glade/u/apps/ch/opt/netcdf/4.4.1.1/gnu/6.3.0/include/netcdf.mod /glade/u/apps/ch/opt/netcdf/4.4.1.1/gnu/6.3.0/lib/libnetcd#ff.a /glade/u/apps/ch/opt/netcdf/4.4.1.1/gnu/6.3.0/lib/libnetcdf.a")
 #set (CMAKE_EXE_LINKER_FLAGS ${LINKER_FLAGS})
 
