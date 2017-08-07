@@ -11,7 +11,8 @@ module purge
 unsetenv LD_LIBRARY_PATH
 
 # Load modules
-module load gnu mpich/3.2 cmake/3.7.2
+#module load gnu mpich/3.2 cmake/3.7.2
+module load gnu openmpi cmake/3.7.2
 module list
 
 # Define lapack path
