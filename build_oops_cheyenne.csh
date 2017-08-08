@@ -12,7 +12,7 @@ unsetenv LD_LIBRARY_PATH
 
 # Load modules
 #module load gnu mpich/3.2 cmake/3.7.2
-module load gnu openmpi cmake/3.7.2
+module load gnu openmpi cmake/3.7.2 netcdf
 module list
 
 # Define lapack path
@@ -31,11 +31,10 @@ setenv BUILD ${SRC}/build
 
 rm -rf ${BUILD}; mkdir ${BUILD}; cd ${BUILD}
 
-
 set path = (${path} ${SRC}/ecbuild/bin $EIGEN3_INCLUDE_DIR) # ~gvernier/boost/build/bin)
 
 # configure
-ecbuild --build=debug -DBOOST_ROOT=$BOOST_ROOT -DBoost_NO_SYSTEM_PATHS=ON -DLAPACK_PATH=$LAPACK_PATH -DLAPACK_LIBRARIES=$LAPACK_LIBRARIES ${SRC}
+ecbuild --build=debug -DBOOST_ROOT=$BOOST_ROOT -DBoost_NO_SYSTEM_PATHS=ON -DLAPACK_PATH=$LAPACK_PATH -DLAPACK_LIBRARIES=$LAPACK_LIBRARIES -DNETCDF_PATH=$NETCDF -DNETCDF_Fortran=ON ${SRC}
 
 # Compile
 make VERBOSE=1 -j4
