@@ -13,6 +13,7 @@
 
 #include <ostream>
 #include <string>
+#include <vector>
 
 #include "model/QgFortran.h"
 #include "util/ObjectCounter.h"
@@ -35,6 +36,11 @@ class QgGeometry : public util::Printable,
   explicit QgGeometry(const eckit::Configuration &);
   QgGeometry(const QgGeometry &);
   ~QgGeometry();
+
+  std::vector<double> getLats() const;
+  std::vector<double> getLons() const;
+  std::vector<double> getLevs() const;
+  std::vector<int> getMask(const int &) const;
 
   int& toFortran() {return keyGeom_;}
   const int& toFortran() const {return keyGeom_;}
