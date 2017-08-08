@@ -26,6 +26,8 @@ setenv EIGEN3_INCLUDE_DIR /glade/p/ral/nsap/jcsda/code/eigen/build
 # Need boost library
 setenv BOOST_ROOT /glade/p/ral/nsap/jcsda/code/boost_1_64_0
 
+setenv NETCDF_LIBRARIES "${NETCDF}/lib/libnetcdff.a;${NETCDF}/lib/libnetcdf.a"
+
 setenv SRC $PWD
 setenv BUILD ${SRC}/build
 
