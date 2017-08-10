@@ -119,7 +119,7 @@ add_subdirectory( src )
 #add_subdirectory( l95 )
 #add_subdirectory( qg )
 
-add_subdirectory( Mom5Cice5 )
+add_subdirectory( wrf )
 
 
 ecbuild_dont_pack ( FILES .pydevproject .project .cproject oops.sublime-project )
