@@ -43,8 +43,9 @@ class Geometry : public util::Printable,
   explicit Geometry(boost::shared_ptr<const Geometry_>);
   ~Geometry();
 
-  std::vector<double> getLats() const;  // one value per point on the 2D horizontal grid
-  std::vector<double> getLons() const;  // one value per point on the 2D horizontal grid
+  std::vector<int> getDims() const;  // grid dimensions (1 integer if unstructured; 2 if structured), should be consistent with the packing
+  std::vector<double> getLats() const;  // one value per point on the 2D horizontal grid (packed)
+  std::vector<double> getLons() const;  // one value per point on the 2D horizontal grid (packed)
   std::vector<double> getLevs() const;  // vertical unit (one column)
   std::vector<int> getMask(const int &) const;  // one value per point on the 2D horizontal grid
                                                 // for a given level (for ocean for example)
@@ -90,6 +91,15 @@ Geometry<MODEL>::~Geometry() {
   util::Timer timer(classname(), "~Geometry");
   geom_.reset();
   Log::trace() << "Geometry<MODEL>::~Geometry done" << std::endl;
+}
+
+// -----------------------------------------------------------------------------
+
+template <typename MODEL>
+std::vector<int> Geometry<MODEL>::getDims() const {
+  Log::trace() << "Geometry<MODEL>::getDims" << std::endl;
+  util::Timer timer(classname(), "getDims");
+  return geom_.getDims();
 }
 
 // -----------------------------------------------------------------------------

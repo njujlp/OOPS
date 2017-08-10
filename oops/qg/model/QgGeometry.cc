@@ -30,6 +30,12 @@ QgGeometry::~QgGeometry() {
   qg_geo_delete_f90(keyGeom_);
 }
 // -----------------------------------------------------------------------------
+std::vector<int> QgGeometry::getDims() const {
+  std::vector<int> dims(2);
+  qg_geo_info_f90(keyGeom_, dims[0], dims[1]);
+  return dims;
+}
+// -----------------------------------------------------------------------------
 std::vector<double> QgGeometry::getLats() const {
   int nx;
   int ny;

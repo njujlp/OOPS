@@ -14,6 +14,12 @@
 // -----------------------------------------------------------------------------
 namespace lorenz95 {
 // -----------------------------------------------------------------------------
+std::vector<int> Resolution::getDims() const {
+  std::vector<int> dims(1);
+  dims[0] = resol_;
+  return dims;
+}
+// -----------------------------------------------------------------------------
 std::vector<double> Resolution::getLats() const {
   std::vector<double> lats(resol_);
   for (int jj = 0; jj < resol_; ++jj) lats[jj] = 0.0;

@@ -28,6 +28,7 @@ class Resolution : public util::Printable {
   Resolution(const Resolution & other): resol_(other.resol_) {}
   ~Resolution() {}
 
+  std::vector<int> getDims() const;
   std::vector<double> getLats() const;
   std::vector<double> getLons() const;
   std::vector<double> getLevs() const;

@@ -37,6 +37,7 @@ class QgGeometry : public util::Printable,
   QgGeometry(const QgGeometry &);
   ~QgGeometry();
 
+  std::vector<int> getDims() const;
   std::vector<double> getLats() const;
   std::vector<double> getLons() const;
   std::vector<double> getLevs() const;
