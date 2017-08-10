@@ -15,8 +15,9 @@ public :: wrf_geom_registry
 
 !> Fortran derived type to hold geometry data for the QG model
 type :: wrf_geom
-  integer :: nx
-  integer :: ny
+  integer :: west_east
+  integer :: south_north
+  integer :: bottom_top
 end type wrf_geom
 
 #define LISTED_TYPE wrf_geom
@@ -46,8 +47,9 @@ call wrf_geom_registry%init()
 call wrf_geom_registry%add(c_key_self)
 call wrf_geom_registry%get(c_key_self,self)
 
-self%nx = config_get_int(c_conf, "nx")
-self%ny = config_get_int(c_conf, "ny")
+!self%west_east   = config_get_int(c_conf, "west_east")
+!self%south_north = config_get_int(c_conf, "south_north")
+!self%bottom_top  = config_get_int(c_conf, "bottom_top")
 
 end subroutine c_wrf_geo_setup
 
@@ -63,8 +65,9 @@ type(wrf_geom), pointer :: self, other
 call wrf_geom_registry%add(c_key_other)
 call wrf_geom_registry%get(c_key_other, other)
 call wrf_geom_registry%get(c_key_self , self )
-other%nx = self%nx
-other%ny = self%ny
+other%west_east   = self%west_east
+other%south_north = self%south_north
+other%bottom_top  = self%bottom_top
 
 end subroutine c_wrf_geo_clone
 
@@ -81,16 +84,18 @@ end subroutine c_wrf_geo_delete
 
 ! ------------------------------------------------------------------------------
 
-subroutine c_wrf_geo_info(c_key_self, c_nx, c_ny) bind(c,name='wrf_geo_info_f90')
+subroutine c_wrf_geo_info(c_key_self, c_west_east, c_south_north, c_bottom_top) bind(c,name='wrf_geo_info_f90')
 implicit none
 integer(c_int), intent(in   ) :: c_key_self
-integer(c_int), intent(inout) :: c_nx
-integer(c_int), intent(inout) :: c_ny
+integer(c_int), intent(inout) :: c_west_east
+integer(c_int), intent(inout) :: c_south_north
+integer(c_int), intent(inout) :: c_bottom_top
 type(wrf_geom), pointer :: self
 
 call wrf_geom_registry%get(c_key_self , self )
-c_nx = self%nx
-c_ny = self%ny
+c_west_east   = self%west_east
+c_south_north = self%south_north
+c_bottom_top  = self%bottom_top
 
 end subroutine c_wrf_geo_info
 
