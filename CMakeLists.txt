@@ -16,6 +16,7 @@ include( ecbuild_bundle )
 project( oops-bundle C CXX Fortran )
 
 set( ENABLE_MPI OFF CACHE BOOL "Do not compile with MPI" )
+#set( ENABLE_MPI ON CACHE BOOL "Compile with MPI" )
 
 ecbuild_bundle_initialize()
 

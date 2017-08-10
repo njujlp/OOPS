@@ -15,6 +15,8 @@ cmake_minimum_required( VERSION 2.8.4 FATAL_ERROR )
 
 project( oops C CXX Fortran)
 
+set( ENABLE_MPI OFF CACHE BOOL "Compile with MPI" )
+
 set( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/../ecbuild/cmake")
 
 set( ECBUILD_DEFAULT_BUILD_TYPE Release )
@@ -79,6 +81,9 @@ include_directories( ${NETCDF_INCLUDE_DIR} )
 #set (LINKER_FLAGS "-L${NETCDF} -Wl,-rpath,-I/glade/u/apps/ch/opt/netcdf/4.4.1.1/gnu/6.3.0/include/netcdf.mod /glade/u/apps/ch/opt/netcdf/4.4.1.1/gnu/6.3.0/lib/libnetcd#ff.a /glade/u/apps/ch/opt/netcdf/4.4.1.1/gnu/6.3.0/lib/libnetcdf.a")
 #set (CMAKE_EXE_LINKER_FLAGS ${LINKER_FLAGS})
 
+# mpi
+#find_package( NetCDF REQUIRED )
+#include_directories( ${NETCDF_INCLUDE_DIR} )
 
 ################################################################################
 # Export package info
