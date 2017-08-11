@@ -16,7 +16,7 @@ public :: wrf_geom_registry
 
 ! ------------------------------------------------------------------------------
 
-integer, parameter :: max_string_length = 128
+integer, parameter :: max_string_length = 256
 
 ! ------------------------------------------------------------------------------
 
@@ -96,23 +96,37 @@ call ncerr(subr,nf90_inquire_dimension(ncid,nlev_id,len=self%nlev))
 call ncerr(subr,nf90_get_att(ncid,nf90_global,'DX',self%dx))
 call ncerr(subr,nf90_get_att(ncid,nf90_global,'DY',self%dy))
 
+write (*,*) " west_east   = ",self%nlon
+write (*,*) " south_north = ",self%nlat
+write (*,*) " bottom_top  = ",self%nlev
+write (*,*) " DX  = ",self%dx
+write (*,*) " DY  = ",self%dy
+
 !> Allocate memory
 allocate(self%lon(self%nlon,self%nlat))
 allocate(self%lat(self%nlon,self%nlat))
+allocate(self%mask(self%nlon,self%nlat))
 allocate(self%pres(self%nlev))
 
 !> Read longitude XLONG
 call ncerr(subr,nf90_inq_varid(ncid,'XLONG',lon_id))
 call ncerr(subr,nf90_get_var(ncid,lon_id,self%lon,(/1,1,1/),(/self%nlon,self%nlat,1/)))
+write (*,*) "XLON = ",self%lon(1,1)
+
 !> Read latitude XLAT
 call ncerr(subr,nf90_inq_varid(ncid,'XLAT',lat_id))
 call ncerr(subr,nf90_get_var(ncid,lat_id,self%lat,(/1,1,1/),(/self%nlon,self%nlat,1/)))
+write (*,*) "XLAT = ",self%lat(1,1)
+
 !> Read mask MASK
-call ncerr(subr,nf90_inq_varid(ncid,'MASK',mask_id))
-call ncerr(subr,nf90_get_var(ncid,lat_id,self%mask,(/1,1,1/),(/self%nlon,self%nlat,1/)))
+call ncerr(subr,nf90_inq_varid(ncid,'LANDMASK',mask_id))
+call ncerr(subr,nf90_get_var(ncid,mask_id,self%mask,(/1,1,1/),(/self%nlon,self%nlat,1/)))
+write (*,*) "MASK = ",self%mask(1,1)
+
 !> Read pressure PB
 call ncerr(subr,nf90_inq_varid(ncid,'PB',pres_id))
 call ncerr(subr,nf90_get_var(ncid,pres_id,self%pres))
+write (*,*) "PB = ",self%pres(1)
 
 !> close file
 call ncerr(subr,nf90_close(ncid))
