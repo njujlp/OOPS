@@ -3,8 +3,8 @@
     "categories": "Info, Test, Warning, Error"
   },
   "resolution": {
-    "nx": "40",
-    "ny": "20",
+    "nx": "160",
+    "ny": "80",
     "bc": "1"
   },
   "model": {
@@ -33,8 +33,8 @@
         "begin": "PT2H",
         "obs_period": "PT2H",
         "obs_density": "50",
-        "nx": "40",
-        "ny": "20",
+        "nx": "160",
+        "ny": "80",
         "obs_error": "0.4"
       }
     },
@@ -50,8 +50,8 @@
         "begin": "PT1H",
         "obs_period": "PT6H",
         "obs_density": "40",
-        "nx": "40",
-        "ny": "20",
+        "nx": "160",
+        "ny": "80",
         "obs_error": "0.6"
       }
     },
@@ -67,8 +67,8 @@
         "begin": "PT1H",
         "obs_period": "PT2H",
         "obs_density": "50",
-        "nx": "40",
-        "ny": "20",
+        "nx": "160",
+        "ny": "80",
         "obs_error": "1.2"
       }
     }
