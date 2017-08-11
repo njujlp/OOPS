@@ -9,9 +9,7 @@
   "toleranceTestAD": "1.0e-12",
   "testdate": "2009-12-31T00:00:00Z",
   "geometry": {
-    "nx": "40",
-    "ny": "20",
-    "bc": "1"
+   "gridfname" : "/glade/p/ral/nsap/jcsda/data/wrf/data/2017072800> wrfout_d01_2017-07-28_06:00:00.001"
   },
   "variables": {
     "variables": "ci"
