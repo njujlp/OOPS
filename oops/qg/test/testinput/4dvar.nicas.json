@@ -3,8 +3,8 @@
     "categories": "Info, Test, Warning, Error, Trace, Stats"
   },
   "resolution": {
-    "nx": "40",
-    "ny": "20",
+    "nx": "160",
+    "ny": "80",
     "bc": "1"
   },
   "model": {
@@ -46,9 +46,13 @@
           "check_pos_def": 0,
           "check_mpi": 1,
           "check_dirac": 1,
-          "ndir": 1,
-          "dirlon(1)": 0.0,
-          "dirlat(1)": 0.0,
+          "ndir": 3,
+          "dirlon(1)": -1.2,
+          "dirlon(2)": 147.0,
+          "dirlon(3)": -79.8,
+          "dirlat(1)": -31.7,
+          "dirlat(2)": 10.7,
+          "dirlat(3)": 21.7,
           "sam_default_seed": 1,
           "mask_check": 0,
           "ntry": 30,
@@ -172,8 +176,8 @@
     "iteration": [
       {
         "resolution": {
-          "nx": "40",
-          "ny": "20",
+          "nx": "160",
+          "ny": "80",
           "bc": "1"
         },
         "linearmodel": {
@@ -196,8 +200,8 @@
       },
       {
         "resolution": {
-          "nx": "40",
-          "ny": "20",
+          "nx": "160",
+          "ny": "80",
           "bc": "1"
         },
         "linearmodel": {

@@ -239,10 +239,20 @@ implicit none
 type(nicas), intent(in) :: self
 type(unstructured_grid), intent(inout) :: dx
 
+type(column_element), pointer :: current, prev
+
 ! Multiply with NICAS
 call log%info("NICAS multiply")
 
+nvars = dx%head%nvars
+nsurf = dx%head%nsurf
 
+current => dx%head
+do while (associated(current))
+  ! BLa
+  current%column%cols
+  current => current%next
+enddo
 
 end subroutine nicas_multiply
 
