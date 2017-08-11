@@ -39,6 +39,12 @@ std::vector<double> Resolution::getLevs() const {
   return levs;
 }
 // -----------------------------------------------------------------------------
+std::vector<double> Resolution::getArea() const {
+  std::vector<double> area(1);
+  area[0] = 1.0;
+  return area;
+}
+// -----------------------------------------------------------------------------
 std::vector<int> Resolution::getMask(const int &) const {
   std::vector<int> mask(resol_);
   for (int jj = 0; jj < resol_; ++jj) mask[jj] = 1;

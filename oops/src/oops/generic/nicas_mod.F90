@@ -53,15 +53,15 @@ contains
 !  C++ interfaces
 ! ------------------------------------------------------------------------------
 
-subroutine create_nicas_c(key, c_conf, cndims, cdims, cnh, clats, clons, cnv, clevs, cmask) bind(c, name='create_nicas_f90')
+subroutine create_nicas_c(key, c_conf, cndims, cdims, cnh, clats, clons, cnv, clevs, carea, cmask) bind(c, name='create_nicas_f90')
 implicit none
 integer(c_int), intent(inout) :: key
 type(c_ptr), intent(in) :: c_conf
 integer(c_int), intent(in) :: cndims, cnh, cnv
-real(c_double), intent(in) :: clats(cnh), clons(cnh), clevs(cnv)
+real(c_double), intent(in) :: clats(cnh), clons(cnh), clevs(cnv), carea(cnv)
 integer(c_int), intent(in) :: cdims(cndims), cmask(cnh*cnv)
 type(nicas), pointer :: self
-real(kind=kind_real) :: lats(cnh), lons(cnh), levs(cnv)
+real(kind=kind_real) :: lats(cnh), lons(cnh), levs(cnv), area(cnv)
 integer :: dims(cndims), mask(cnh*cnv)
 call nicas_registry%init()
 call nicas_registry%add(key)
@@ -70,8 +70,9 @@ dims(:)=cdims(:)
 lats(:)=clats(:)
 lons(:)=clons(:)
 levs(:)=clevs(:)
+area(:)=carea(:)
 mask(:)=cmask(:)
-call create_nicas(self, c_conf, dims, lats, lons, levs, mask)
+call create_nicas(self, c_conf, dims, lats, lons, levs, area, mask)
 end subroutine create_nicas_c
 
 ! ------------------------------------------------------------------------------
@@ -102,11 +103,11 @@ end subroutine nicas_multiply_c
 !  End C++ interfaces
 ! ------------------------------------------------------------------------------
 
-subroutine create_nicas(self, c_conf, dims, lats, lons, levs, mask)
+subroutine create_nicas(self, c_conf, dims, lats, lons, levs, area, mask)
 implicit none
 type(nicas), intent(inout) :: self
 type(c_ptr), intent(in) :: c_conf
-real(kind=kind_real), intent(in) :: lats(:), lons(:), levs(:)
+real(kind=kind_real), intent(in) :: lats(:), lons(:), levs(:), area(:)
 integer, intent(in) :: dims(:),mask(:)
 integer :: ndims,nc0,nlev
 character(len=4) :: myprocchar,nprocchar,nthreadchar
@@ -134,7 +135,7 @@ call esmf_start
 
 ! Initialize coordinates
 call log%info("Initialize coordinates")
-call model_oops_coord(dims, lats, lons, levs, mask, self%sdata)
+call model_oops_coord(dims, lats, lons, levs, area, mask, self%sdata)
 
 ! Call driver
 call nicas_driver(self%sdata)

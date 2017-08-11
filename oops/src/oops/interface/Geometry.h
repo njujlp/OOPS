@@ -47,6 +47,7 @@ class Geometry : public util::Printable,
   std::vector<double> getLats() const;  // one value per point on the 2D horizontal grid (packed)
   std::vector<double> getLons() const;  // one value per point on the 2D horizontal grid (packed)
   std::vector<double> getLevs() const;  // vertical unit (one column)
+  std::vector<double> getArea() const;  // area of each level (one column)
   std::vector<int> getMask(const int &) const;  // one value per point on the 2D horizontal grid
                                                 // for a given level (for ocean for example)
 
@@ -127,6 +128,15 @@ std::vector<double> Geometry<MODEL>::getLevs() const {
   Log::trace() << "Geometry<MODEL>::getLevs" << std::endl;
   util::Timer timer(classname(), "getLevs");
   return geom_.getLevs();
+}
+
+// -----------------------------------------------------------------------------
+
+template <typename MODEL>
+std::vector<double> Geometry<MODEL>::getArea() const {
+  Log::trace() << "Geometry<MODEL>::getArea" << std::endl;
+  util::Timer timer(classname(), "getAra");
+  return geom_.getArea();
 }
 
 // -----------------------------------------------------------------------------

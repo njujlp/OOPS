@@ -12,6 +12,7 @@
 #include "model/QgGeometry.h"
 #include "model/QgFortran.h"
 #include "eckit/config/Configuration.h"
+#include <math.h>
 
 // -----------------------------------------------------------------------------
 namespace qg {
@@ -41,11 +42,12 @@ std::vector<double> QgGeometry::getLats() const {
   int ny;
   qg_geo_info_f90(keyGeom_, nx, ny);
   std::vector<double> lats(nx * ny);
-  const double dy = 80.0 / double(ny);
+  const double dytot = 360.0 * double(ny) / double (nx);
+  const double dy = dytot / double(ny);
   int jj = 0;
   for (int jy = 0; jy < ny; ++jy) {
     for (int jx = 0; jx < nx; ++jx) {
-      lats[jj] = jy * dy - 40.0;
+      lats[jj] = (jy + 0.5) * dy - 0.5 * dytot;
       ++jj;
     }
   }
@@ -75,6 +77,18 @@ std::vector<double> QgGeometry::getLevs() const {
   return levs;
 }
 // -----------------------------------------------------------------------------
+std::vector<double> QgGeometry::getArea() const {
+  int nx;
+  int ny;
+  qg_geo_info_f90(keyGeom_, nx, ny);
+  const double dytot = 360.0 * double(ny) / double (nx);
+  std::vector<double> area(2);
+  const double a = 4.0 * M_PI * sin (0.5 * dytot * M_PI / 180.0); // Domain between min and max latitudes
+  area[0] = a;
+  area[1] = a;
+  return area;
+}
+// -----------------------------------------------------------------------------
 std::vector<int> QgGeometry::getMask(const int &) const {
   int nx;
   int ny;
@@ -91,4 +105,4 @@ void QgGeometry::print(std::ostream & os) const {
   os << "nx = " << nx << ", ny = " << ny;
 }
 // -----------------------------------------------------------------------------
-}  // namespace qg
+}  // namespace qg 
