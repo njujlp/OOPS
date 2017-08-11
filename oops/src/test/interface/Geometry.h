@@ -25,6 +25,7 @@
 #include "oops/interface/Geometry.h"
 #include "test/TestEnvironment.h"
 #include "eckit/config/Configuration.h"
+#include "util/Logger.h"
 
 namespace test {
 
@@ -55,6 +56,8 @@ template <typename MODEL> void testConstructor() {
   boost::scoped_ptr<Geometry_> geom(new Geometry_(GeometryFixture<MODEL>::getConfig()));
   BOOST_CHECK(geom.get());
 
+  oops::Log::info() << *geom << std::endl;
+  
   geom.reset();
   BOOST_CHECK(!geom.get());
 }

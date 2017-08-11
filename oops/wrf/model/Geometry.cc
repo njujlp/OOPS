@@ -31,8 +31,14 @@ void Geometry::print(std::ostream & os) const {
   int nlon;
   int nlat;
   int nlev;
-  wrf_geo_info_f90(keyGeom_, nlon, nlat, nlev);
-  os << "nlon = " << nlon << ", nlat = " << nlat << "nlev = " << nlev ;
+  double dx;
+  double dy;
+// std::string gridfname(256);
+
+// wrf_geo_info_f90(keyGeom_, nlon, nlat, nlev);
+   wrf_geo_info_f90(keyGeom_, nlon, nlat, nlev, dx, dy);
+
+  os << "nlon = " << nlon << ", nlat = " << nlat << ", nlev = " << nlev << ", dx = " << dx << ", dy = " << dy ;
 }
 // -----------------------------------------------------------------------------
 }  // namespace wrf

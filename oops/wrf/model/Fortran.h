@@ -32,7 +32,7 @@ extern "C" {
 // -----------------------------------------------------------------------------
   void wrf_geo_setup_f90(int & keyGeom, const eckit::Configuration * const *);
   void wrf_geo_clone_f90(const int & keyGeom, int & keyGeom_other);
-  void wrf_geo_info_f90(const int & keyGeom, int &, int &, int &);
+  void wrf_geo_info_f90(const int & keyGeom, int &, int &, int &, double &, double &);
   void wrf_geo_delete_f90(int & keyGeom);
 
 // -----------------------------------------------------------------------------

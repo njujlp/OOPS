@@ -7,6 +7,7 @@ use iso_c_binding
 use config_mod
 use kinds
 use tools_nc
+use string_f_c_mod
 use netcdf
 
 implicit none
@@ -61,7 +62,6 @@ type(wrf_geom), pointer :: self
 
 integer :: ncid,nlon_id,nlat_id,nlev_id
 integer :: lon_id,lat_id,pres_id,mask_id
-integer :: iread
 character (len=max_string_length) :: subr
 
 call wrf_geom_registry%init()
@@ -70,13 +70,12 @@ call wrf_geom_registry%get(c_key_self,self)
 
 
 !> Read the WRF file name to load in the namelist gridfname
-!iread = 1
-!if (config_element_exists(c_conf,"gridfname")) then
-!  iread = config_get_int(c_conf,"gridfname")
-!endif
+if (.NOT. config_element_exists(c_conf,"gridfname")) then
+    write (*,'(/,A,/)') "ERROR: Cannot find entry 'gridfname' in 'Geometry' record"
+    call abort
+endif
 
-!self%gridfname = config_get_string(c_conf, len(self%gridfname), "gridfname")
- self%gridfname = config_get_string(c_conf, max_string_length, "gridfname")
+ self%gridfname = config_get_string(c_conf, len(self%gridfname), "gridfname")
  subr = self%gridfname
 
 !> Open file gridfname
@@ -146,9 +145,20 @@ type(wrf_geom), pointer :: self, other
 call wrf_geom_registry%add(c_key_other)
 call wrf_geom_registry%get(c_key_other, other)
 call wrf_geom_registry%get(c_key_self , self )
+
 other%nlon = self%nlon
 other%nlat = self%nlat
 other%nlev = self%nlev
+
+other%gridfname = self%gridfname
+
+other%dx = self%dx
+other%dy = self%dy
+
+other%lon = self%lon
+other%lat = self%lat
+other%mask = self%mask
+other%pres = self%pres
 
 end subroutine c_wrf_geo_clone
 
@@ -165,18 +175,39 @@ end subroutine c_wrf_geo_delete
 
 ! ------------------------------------------------------------------------------
 
-subroutine c_wrf_geo_info(c_key_self, c_nlon, c_nlat, c_nlev) bind(c,name='wrf_geo_info_f90')
+subroutine c_wrf_geo_info(c_key_self, c_nlon, c_nlat, c_nlev, c_dx, c_dy) bind(c,name='wrf_geo_info_f90')
+!c_gridfname, 
 implicit none
 integer(c_int), intent(in   ) :: c_key_self
 integer(c_int), intent(inout) :: c_nlon
 integer(c_int), intent(inout) :: c_nlat
 integer(c_int), intent(inout) :: c_nlev
+
+!character(len=*), intent(inout) :: c_gridfname
+
+real(c_double), intent(inout) :: c_dx
+real(c_double), intent(inout) :: c_dy
+
+character(kind=c_char,len=1) :: cstring(max_string_length)
+
+
 type(wrf_geom), pointer :: self
 
 call wrf_geom_registry%get(c_key_self , self )
+
 c_nlon = self%nlon
 c_nlat = self%nlat
 c_nlev = self%nlev
+
+c_nlon = self%nlon
+c_nlat = self%nlat
+c_nlev = self%nlev
+
+c_dx = self%dx
+c_dy = self%dy
+
+!cstring = self%gridfname
+!call c_f_string(cstring, c_gridfname)
 
 end subroutine c_wrf_geo_info
 
