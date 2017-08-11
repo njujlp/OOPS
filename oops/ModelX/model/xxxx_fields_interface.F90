@@ -356,22 +356,3 @@ end subroutine xxxx_field_rms_c
 
 ! ------------------------------------------------------------------------------
 
-subroutine xxxx_fieldnum_c(c_key_fld, nx, ny, nf, nb) bind(c,name='xxxx_field_sizes_f90')
-use iso_c_binding
-use xxxx_fields
-implicit none
-integer(c_int), intent(in) :: c_key_fld
-integer(kind=c_int), intent(inout) :: nx, ny, nf, nb
-type(xxxx_field), pointer :: fld
-
-call xxxx_field_registry%get(c_key_fld,fld)
-
-nx = fld%nx
-ny = fld%ny
-nf = fld%nf
-nb =0
-if (fld%lbc) nb = 2
-
-end subroutine xxxx_fieldnum_c
-
-! ------------------------------------------------------------------------------

@@ -32,7 +32,6 @@ extern "C" {
 // -----------------------------------------------------------------------------
   void xxxx_geo_setup_f90(int & keyGeom, const eckit::Configuration * const *);
   void xxxx_geo_clone_f90(const int & keyGeom, int & keyGeom_other);
-  void xxxx_geo_info_f90(const int & keyGeom, int &, int &);
   void xxxx_geo_delete_f90(int & keyGeom);
 
 // -----------------------------------------------------------------------------
@@ -63,7 +62,6 @@ extern "C" {
                                const util::DateTime * const *);
 
   void xxxx_field_gpnorm_f90(const int & keyFlds, const int &, double &);
-  void xxxx_field_sizes_f90(const int & keyFlds, int &, int &, int &, int &);
   void xxxx_field_rms_f90(const int & keyFlds, double &);
 
 // -----------------------------------------------------------------------------
@@ -71,7 +69,6 @@ extern "C" {
 // -----------------------------------------------------------------------------
   void xxxx_var_create_f90(int & keyVars, const eckit::Configuration * const *);
   void xxxx_var_clone_f90(const int & keyVars, int & keyVars_other);
-  void xxxx_var_info_f90(const int & keyVars, int &, int &);
   void xxxx_var_delete_f90(int & keyVars);
 }
 

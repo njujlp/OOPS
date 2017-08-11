@@ -28,10 +28,7 @@ Geometry::~Geometry() {
 }
 // -----------------------------------------------------------------------------
 void Geometry::print(std::ostream & os) const {
-  int nx;
-  int ny;
-  xxxx_geo_info_f90(keyGeom_, nx, ny);
-  os << "nx = " << nx << ", ny = " << ny;
+  os << "xxxx::Geometry::print not implemented yet" << std::endl;
 }
 // -----------------------------------------------------------------------------
 }  // namespace xxxx

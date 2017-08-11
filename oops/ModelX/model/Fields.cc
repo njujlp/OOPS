@@ -154,20 +154,7 @@ double Fields::norm() const {
 }
 // -----------------------------------------------------------------------------
 void Fields::print(std::ostream & os) const {
-  int nx = -1;
-  int ny = -1;
-  int nf = -1;
-  int nb = -1;
-  xxxx_field_sizes_f90(keyFlds_, nx, ny, nf, nb);
-  os << std::endl << "  Resolution = " << nx << ", " << ny
-     << ", Fields = " << nf << ", " << nb;
-  nf += nb;
-  std::vector<double> zstat(3*nf);
-  xxxx_field_gpnorm_f90(keyFlds_, nf, zstat[0]);
-  for (int jj = 0; jj < nf; ++jj) {
-    os << std::endl << "  Min=" << zstat[3*jj]
-       << ", Max=" << zstat[3*jj+1] << ", RMS=" << zstat[3*jj+2];
-  }
+  os << "xxxx::Fields::print not implemented yet" << std::endl;
 }
 // -----------------------------------------------------------------------------
 }  // namespace xxxx

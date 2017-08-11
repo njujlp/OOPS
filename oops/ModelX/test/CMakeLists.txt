@@ -32,9 +32,3 @@ ecbuild_add_test( TARGET  test_xxxx_state
                   ARGS    "testinput/interfaces.json"
                   LIBS    xxxx )
 
-ecbuild_add_test( TARGET  test_xxxx_increment
-                  BOOST
-                  SOURCES executables/TestIncrement.cc
-                  ARGS    "testinput/interfaces.json"
-                  LIBS    xxxx )
-
