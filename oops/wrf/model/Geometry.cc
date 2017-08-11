@@ -28,11 +28,11 @@ Geometry::~Geometry() {
 }
 // -----------------------------------------------------------------------------
 void Geometry::print(std::ostream & os) const {
-  int west_east;
-  int south_north;
-  int bottom_top;
-  wrf_geo_info_f90(keyGeom_, west_east, south_north, bottom_top);
-  os << "west_east = " << west_east << ", south_north = " << south_north << "bottom_top = " << bottom_top ;
+  int nlon;
+  int nlat;
+  int nlev;
+  wrf_geo_info_f90(keyGeom_, nlon, nlat, nlev);
+  os << "nlon = " << nlon << ", nlat = " << nlat << "nlev = " << nlev ;
 }
 // -----------------------------------------------------------------------------
 }  // namespace wrf

@@ -65,9 +65,9 @@ type(wrf_geom),  intent(in)    :: geom
 type(wrf_vars),  intent(in)    :: vars
 integer :: ioff
 
-self%nx = geom%west_east
-self%ny = geom%south_north
-self%nl = 2
+self%nx = geom%nlon
+self%ny = geom%nlat
+self%nl = geom%nlev
 self%nf = vars%nv
 self%lbc = vars%lbc
 

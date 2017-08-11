@@ -23,6 +23,7 @@ wrf_fields_interface.F90
 wrf_geom_mod.F90
 wrf_invent_state.f90
 wrf_vars_mod.F90
+tools_nc.f90
 )
 
 if ( CMAKE_Fortran_COMPILER_ID MATCHES "Cray" )
@@ -32,7 +33,7 @@ endif()
 ecbuild_add_library( TARGET   wrf
                      DEFINITIONS ${cfdealloc}
                      SOURCES  ${oops_wrf_src_files}
-                     LIBS     oops ${LAPACK_LIBRARIES}
+                     LIBS     oops ${LAPACK_LIBRARIES} ${NETCDF_LIBRARIES}
                      INSTALL_HEADERS LISTED
                      LINKER_LANGUAGE ${OOPS_LINKER_LANGUAGE}
                     )
