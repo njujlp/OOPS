@@ -57,7 +57,7 @@ end type qg_field
 #define LISTED_TYPE qg_field
 
 !> Linked list interface - defines registry_t type
-#include "linkedList_i.f"
+#include "util/linkedList_i.f"
 
 !> Global registry
 type(registry_t) :: qg_field_registry
@@ -66,7 +66,7 @@ type(registry_t) :: qg_field_registry
 contains
 ! ------------------------------------------------------------------------------
 !> Linked list implementation
-#include "linkedList_c.f"
+#include "util/linkedList_c.f"
 
 ! ------------------------------------------------------------------------------
 
@@ -894,10 +894,10 @@ zz(2) = 1.0
 call create_unstructured_grid(ug, 2, zz)
 
 dx=360.0_kind_real/real(self%nx,kind_real)
-dy=40.0_kind_real/real(self%ny,kind_real)
+dy=80.0_kind_real/real(self%ny,kind_real)
 
 do jy=1,self%ny
-  xlat = (jy-1) * dy
+  xlat = (jy-1) * dy - 40.0_kind_real
   do jx=1,self%nx
     xlon = (jx-1) * dx
     call add_column(ug, xlat, xlon, 2, 1, 0)
@@ -920,11 +920,11 @@ real(kind=kind_real) :: dx, dy
 integer :: jx,jy
 
 dx=360.0_kind_real/real(self%nx,kind_real)
-dy=40.0_kind_real/real(self%ny,kind_real)
+dy=80.0_kind_real/real(self%ny,kind_real)
 
 current => ug%head
 do while (associated(current))
-  jy = nint(current%column%lat / dy) + 1
+  jy = nint((current%column%lat + 40.0_kind_real) / dy) + 1
   jx = nint(current%column%lon / dx) + 1
   self%x(jx,jy,1) = current%column%cols(1)
   self%x(jx,jy,2) = current%column%cols(2)

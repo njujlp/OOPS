@@ -22,7 +22,7 @@ end type xxxx_geom
 #define LISTED_TYPE xxxx_geom
 
 !> Linked list interface - defines registry_t type
-#include "linkedList_i.f"
+#include "util/linkedList_i.f"
 
 !> Global registry
 type(registry_t) :: xxxx_geom_registry
@@ -31,7 +31,7 @@ type(registry_t) :: xxxx_geom_registry
 contains
 ! ------------------------------------------------------------------------------
 !> Linked list implementation
-#include "linkedList_c.f"
+#include "util/linkedList_c.f"
 
 ! ------------------------------------------------------------------------------
 
