@@ -1,6 +1,14 @@
 #!/bin/csh -f
+#------------------------------------------------------------------------------#
+# The following is needed at run time:
+#  unsetenv LD_LIBRARY_PATH
+#  module purge
+#  module load gnu cmake/3.7.2 netcdf
+#  setenv BOOST_ROOT /glade/p/ral/nsap/jcsda/code/boost_1_64_0
+#  setenv LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${BOOST_ROOT}/stage/lib"
+#------------------------------------------------------------------------------#
 
-#git clone https://github.com/JCSDA/OOPS
+#git clone https://github.com/JCSDA/OOPS.git
 #cd OOPS
 
 # enable modules
