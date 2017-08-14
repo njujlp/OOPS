@@ -127,7 +127,7 @@ add_subdirectory( src )
 
 
 #add_subdirectory( l95 )
-#add_subdirectory( qg )
+add_subdirectory( qg )
 
 add_subdirectory( Mom5Cice5 )
 
