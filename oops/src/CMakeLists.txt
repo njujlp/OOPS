@@ -193,9 +193,9 @@ oops/generic/nicas/type_ctree.cpp
 oops/generic/nicas/type_ctree.f90
 oops/generic/nicas/type_ctree.h
 oops/generic/nicas/type_ctree.hpp
-oops/generic/nicas/type_esmf.f90
 oops/generic/nicas/type_fields.f90
 oops/generic/nicas/type_linop.f90
+oops/generic/nicas/type_mesh.f90
 oops/generic/nicas/type_mpl.f90
 oops/generic/nicas/type_ndata.f90
 oops/generic/nicas/type_randgen_api.cpp
@@ -286,7 +286,7 @@ ecbuild_add_library( TARGET     oops
                      SOURCES    
                                 ${FORTRAN_BINDINGS}
                                 ${oops_src_files}
-                     LIBS       ${LIBXML2_LIBRARIES} ${LAPACK_LIBRARIES} ${NETCDF_LIBRARIES} ${ESMF_LIBRARIES} fckit eckit_mpi eckit
+                     LIBS       ${LIBXML2_LIBRARIES} ${LAPACK_LIBRARIES} ${NETCDF_LIBRARIES} fckit eckit_mpi eckit
                      INSTALL_HEADERS LISTED
                      LINKER_LANGUAGE ${OOPS_LINKER_LANGUAGE}
                    )

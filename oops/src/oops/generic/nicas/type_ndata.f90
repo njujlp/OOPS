@@ -10,7 +10,6 @@
 !----------------------------------------------------------------------
 module type_ndata
 
-use esmf
 use module_namelist, only: nam,namncwrite
 use netcdf
 use tools_const, only: rad2deg
@@ -19,7 +18,6 @@ use tools_kinds, only: kind_real
 use tools_missing, only: msvali,msvalr,msi,msr
 use tools_nc, only: ncerr,ncfloat
 use type_com, only: comtype,com_dealloc,com_read,com_write
-use type_fields, only: fldtype,alphatype
 use type_linop, only: linoptype,linop_alloc,linop_dealloc,linop_copy,linop_read,linop_write
 use type_mpl, only: mpl
 use type_randgen, only: randgentype,create_randgen,delete_randgen
@@ -49,11 +47,6 @@ type ndatatype
    integer,allocatable :: grid_nnb(:)      !< Number of neighbors on the full grid
    integer,allocatable :: grid_inb(:,:)    !< Neighbors indices on the full grid
    real(kind_real),allocatable :: grid_dnb(:,:)       !< Neighbors distances on the full grid
-
-   ! ESMF fields
-   type(esmf_field) :: c0field
-   type(esmf_field) :: c1field
-   type(esmf_field),allocatable :: c2field(:)
 
    ! Boundary nodes
    integer,allocatable :: nbnd(:)          !< Number of boundary nodes
@@ -86,8 +79,8 @@ type ndatatype
    type(linoptype),allocatable :: s(:)     !< Subsample interpolation
 
    ! Normalization
-   type(fldtype) :: norm                   !< Normalization factor
-   type(alphatype) :: norm_sqrt            !< Internal normalization factor for the square-root formulation
+   real(kind_real),allocatable :: norm(:,:) !< Normalization factor
+   real(kind_real),allocatable :: norm_sqrt(:) !< Internal normalization factor for the square-root formulation
 
    ! Other data
 
@@ -144,8 +137,8 @@ type ndataloctype
    integer,allocatable :: isb_to_il1(:)  !< Subgrid to subset Sl1 on halo B
 
    ! Normalization
-   type(fldtype) :: norm                 !< Normalization factor
-   type(alphatype) :: norm_sqrt          !< Internal normalization factor for the square-root formulation
+   real(kind_real),allocatable :: norm(:,:) !< Normalization factor
+   real(kind_real),allocatable :: norm_sqrt(:) !< Internal normalization factor for the square-root formulation
 
    ! Communications
    integer :: mpicom                     !< Number of communication steps
@@ -244,8 +237,8 @@ if (allocated(ndataloc%s)) then
 end if
 if (allocated(ndataloc%isb_to_ic2b)) deallocate(ndataloc%isb_to_ic2b)
 if (allocated(ndataloc%isb_to_il1)) deallocate(ndataloc%isb_to_il1)
-if (allocated(ndataloc%norm%val)) deallocate(ndataloc%norm%val)
-if (allocated(ndataloc%norm_sqrt%val)) deallocate(ndataloc%norm_sqrt%val)
+if (allocated(ndataloc%norm)) deallocate(ndataloc%norm)
+if (allocated(ndataloc%norm_sqrt)) deallocate(ndataloc%norm_sqrt)
 call com_dealloc(ndataloc%AB)
 call com_dealloc(ndataloc%AC)
 
@@ -291,8 +284,8 @@ allocate(ndataloc_out%v(ndataloc_out%nl0i))
 allocate(ndataloc_out%s(ndataloc_out%nl1))
 allocate(ndataloc_out%isb_to_ic2b(ndataloc_out%nsb))
 allocate(ndataloc_out%isb_to_il1(ndataloc_out%nsb))
-allocate(ndataloc_out%norm%vala(ndataloc_out%nc0a,ndataloc_out%nl0))
-if (nam%lsqrt) allocate(ndataloc_out%norm_sqrt%valb(ndataloc_out%nsb))
+allocate(ndataloc_out%norm(ndataloc_out%nc0a,ndataloc_out%nl0))
+if (nam%lsqrt) allocate(ndataloc_out%norm_sqrt(ndataloc_out%nsb))
 
 ! Copy
 ndataloc_out%vbot = ndataloc_in%vbot
@@ -312,8 +305,8 @@ do il1=1,ndataloc_out%nl1
 end do
 ndataloc_out%isb_to_ic2b = ndataloc_in%isb_to_ic2b
 ndataloc_out%isb_to_il1 = ndataloc_in%isb_to_il1
-ndataloc_out%norm%vala = ndataloc_in%norm%vala
-if (nam%lsqrt) ndataloc_out%norm_sqrt%val = ndataloc_in%norm_sqrt%val
+ndataloc_out%norm = ndataloc_in%norm
+if (nam%lsqrt) ndataloc_out%norm_sqrt = ndataloc_in%norm_sqrt
 ndataloc_out%AB = ndataloc_in%AB
 ndataloc_out%AC = ndataloc_in%AC
 
@@ -369,8 +362,8 @@ allocate(ndata%ic0_to_ic1(ndata%nc0))
 allocate(ndata%il0_to_il1(ndata%nl0))
 allocate(ndata%ic2il1_to_ic1(ndata%nc1,ndata%nl1))
 allocate(ndata%ic1il1_to_is(ndata%nc1,ndata%nl1))
-allocate(ndata%norm%val(ndata%nc0,ndata%nl0))
-if (nam%lsqrt) allocate(ndata%norm_sqrt%val(ndata%ns))
+allocate(ndata%norm(ndata%nc0,ndata%nl0))
+if (nam%lsqrt) allocate(ndata%norm_sqrt(ndata%ns))
 
 ! Read data
 call ncerr(subr,nf90_inq_varid(ncid,'vbot',vbot_id))
@@ -403,8 +396,8 @@ call ncerr(subr,nf90_get_var(ncid,ic0_to_ic1_id,ndata%ic0_to_ic1))
 call ncerr(subr,nf90_get_var(ncid,il0_to_il1_id,ndata%il0_to_il1))
 call ncerr(subr,nf90_get_var(ncid,ic2il1_to_ic1_id,ndata%ic2il1_to_ic1))
 call ncerr(subr,nf90_get_var(ncid,ic1il1_to_is_id,ndata%ic1il1_to_is))
-call ncerr(subr,nf90_get_var(ncid,norm_id,ndata%norm%val))
-if (nam%lsqrt) call ncerr(subr,nf90_get_var(ncid,norm_sqrt_id,ndata%norm_sqrt%val))
+call ncerr(subr,nf90_get_var(ncid,norm_id,ndata%norm))
+if (nam%lsqrt) call ncerr(subr,nf90_get_var(ncid,norm_sqrt_id,ndata%norm_sqrt))
 
 ! Read linear operators
 call linop_read(ncid,'c',ndata%c)
@@ -547,7 +540,7 @@ if (ndataloc%nsb>0) allocate(ndataloc%isb_to_il1(ndataloc%nsb))
 if (ndataloc%nsa>0) allocate(ndataloc%isa_to_isb(ndataloc%nsa))
 if (ndataloc%nsa>0) allocate(ndataloc%isa_to_isc(ndataloc%nsa))
 if (ndataloc%nsb>0) allocate(ndataloc%isb_to_isc(ndataloc%nsb))
-allocate(ndataloc%norm%vala(ndataloc%nc0a,ndataloc%nl0))
+allocate(ndataloc%norm(ndataloc%nc0a,ndataloc%nl0))
 
 ! Read data
 if (ndataloc%nc1b>0) call ncerr(subr,nf90_inq_varid(ncid,'vbot',vbot_id))
@@ -565,7 +558,7 @@ if (ndataloc%nsb>0) call ncerr(subr,nf90_get_var(ncid,isb_to_il1_id,ndataloc%isb
 if (ndataloc%nsa>0) call ncerr(subr,nf90_get_var(ncid,isa_to_isb_id,ndataloc%isa_to_isb))
 if (ndataloc%nsa>0) call ncerr(subr,nf90_get_var(ncid,isa_to_isc_id,ndataloc%isa_to_isc))
 if (ndataloc%nsb>0) call ncerr(subr,nf90_get_var(ncid,isb_to_isc_id,ndataloc%isb_to_isc))
-call ncerr(subr,nf90_get_var(ncid,norm_id,ndataloc%norm%vala))
+call ncerr(subr,nf90_get_var(ncid,norm_id,ndataloc%norm))
 
 ! Read communications
 if (nam%nproc>1) then
@@ -656,8 +649,8 @@ call ncerr(subr,nf90_put_var(ncid,ic0_to_ic1_id,ndata%ic0_to_ic1))
 call ncerr(subr,nf90_put_var(ncid,il0_to_il1_id,ndata%il0_to_il1))
 call ncerr(subr,nf90_put_var(ncid,ic2il1_to_ic1_id,ndata%ic2il1_to_ic1))
 call ncerr(subr,nf90_put_var(ncid,ic1il1_to_is_id,ndata%ic1il1_to_is))
-call ncerr(subr,nf90_put_var(ncid,norm_id,ndata%norm%val))
-if (nam%lsqrt) call ncerr(subr,nf90_put_var(ncid,norm_sqrt_id,ndata%norm_sqrt%val))
+call ncerr(subr,nf90_put_var(ncid,norm_id,ndata%norm))
+if (nam%lsqrt) call ncerr(subr,nf90_put_var(ncid,norm_sqrt_id,ndata%norm_sqrt))
 
 ! Write linear operators
 call linop_write(ncid,ndata%c)
@@ -747,7 +740,7 @@ do iproc=1,nam%nproc
    if (ndataloc(iproc)%nsa>0) call ncerr(subr,nf90_put_var(ncid,isa_to_isb_id,ndataloc(iproc)%isa_to_isb))
    if (ndataloc(iproc)%nsa>0) call ncerr(subr,nf90_put_var(ncid,isa_to_isc_id,ndataloc(iproc)%isa_to_isc))
    if (ndataloc(iproc)%nsb>0) call ncerr(subr,nf90_put_var(ncid,isb_to_isc_id,ndataloc(iproc)%isb_to_isc))
-   call ncerr(subr,nf90_put_var(ncid,norm_id,ndataloc(iproc)%norm%vala))
+   call ncerr(subr,nf90_put_var(ncid,norm_id,ndataloc(iproc)%norm))
 
    ! Write communications
    if (nam%nproc>1) then
@@ -786,7 +779,6 @@ integer :: nc0a_id,nl0_id,nc1b_id,nl1_id,nsa_id,nsb_id
 integer :: vbot_id,nc2b_id,isb_to_ic2b_id,isb_to_il1_id
 integer :: c_n_s_id,h_n_s_id,s_n_s_id
 integer :: isa_to_isb_id,isa_to_isc_id,isb_to_isc_id
-integer :: norm_id
 integer :: AB_jhalocounts_id,AB_jexclcounts_id
 integer :: AC_jhalocounts_id,AC_jexclcounts_id
 integer :: nc0_id,nproc1_id,nproc2_id

@@ -17,7 +17,6 @@ use tools_display, only: msgerror
 use tools_kinds,only: kind_real
 use tools_missing, only: msvalr,msi,msr,isanynotmsr
 use tools_nc, only: ncerr,ncfloat
-use type_esmf, only: esmf_create_field
 use type_mpl, only: mpl
 use type_ndata, only: ndatatype,ndata_alloc
 
@@ -79,20 +78,6 @@ end do
 
 ! Vertical unit
 ndata%vunit = levs
-
-! ESMF field for interpolations
-if (size(dims)==1) then
-   ! Create ESMF field from mesh
-   call esmf_create_field(ndata,ndata%nc0,ndata%lon,ndata%lat,any(ndata%mask,dim=2),ndata%c0field)
-elseif (size(dims)==2) then
-   ! Create ESMF field from grid
-   ndata%nlon = dims(1)
-   ndata%nlat = dims(2)
-   call esmf_create_field(ndata)
-else
-   ! Not yet implemented
-   call msgerror('wrong dims size in create_nicas')
-end if
 
 end subroutine model_oops_coord
 

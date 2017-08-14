@@ -206,7 +206,7 @@ if (nam%check_dirac) then
    call test_dirac(ndata,ndataloc)
 end if
 
-if (.true.) then
+if (nam%check_perf) then
    !----------------------------------------------------------------------
    ! Test NICAS performance
    !----------------------------------------------------------------------
@@ -214,7 +214,7 @@ if (.true.) then
    write(mpl%unit,'(a)') '-------------------------------------------------------------------'
    write(mpl%unit,'(a)') '--- Test NICAS performance'
 
-   if (mpl%main) call test_perf(ndata)
+   if (mpl%main) call test_perf(ndataloc)
 end if
 
 ! Flush units

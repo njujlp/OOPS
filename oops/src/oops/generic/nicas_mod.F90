@@ -15,7 +15,6 @@ use module_nicas, only: nicas_driver
 use model_oops, only: model_oops_coord
 use module_namelist, only: nam,namcheck
 use tools_display, only: listing_setup
-use type_esmf, only: esmf_start,esmf_end
 use type_mpl, only: mpl
 use type_ndata, only: ndatatype,ndataloctype
 use fckit_log_module, only : log
@@ -131,10 +130,6 @@ call namcheck
 write(nprocchar,'(i4)') mpl%nproc
 write(nthreadchar,'(i4)') mpl%nthread
 call log%info("Parallel setup: "//nprocchar//" MPI tasks and "//nthreadchar//" OpenMP threads")
-
-! Initialize ESMF
-call log%info("Initialize ESMF")
-call esmf_start
 
 ! Initialize coordinates
 call log%info("Initialize coordinates")

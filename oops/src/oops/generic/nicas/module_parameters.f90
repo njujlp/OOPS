@@ -13,7 +13,7 @@ module module_parameters
 use model_interface, only: model_read
 use module_namelist, only: nam
 use module_parameters_convol, only: compute_convol_network,compute_convol_distance
-use module_parameters_interp, only: compute_interp_h,compute_interp_v,compute_interp_s
+use module_parameters_interp, only: compute_interp_h,compute_interp_v,compute_interp_s,interp_horiz
 use netcdf
 use omp_lib
 use tools_const, only: pi,req,deg2rad,rad2deg,sphere_dist,vector_product,vector_triple_product
@@ -22,6 +22,7 @@ use tools_kinds,only: kind_real
 use tools_missing, only: msvali,msvalr,msi,msr,isnotmsr,isnotmsi
 use tools_nc, only: ncfloat,ncerr
 use type_ctree, only: ctreetype,create_ctree,find_nearest_neighbors,delete_ctree
+use type_mesh, only: meshtype,create_mesh
 use type_mpl, only: mpl,mpl_bcast
 use type_ndata, only: ndatatype
 use type_randgen, only: initialize_sampling,rand_integer
@@ -289,56 +290,14 @@ type(ndatatype),intent(inout) :: ndata !< Sampling data
 
 ! Local variables
 integer :: nc0,lnew,info,ic0,jc0,kc0,i,ibnd,il0
-integer :: redundant(ndata%nc0)
-integer,allocatable :: order(:),list(:),lptr(:),lend(:),near(:),next(:),ic0_bnd(:,:,:)
+integer,allocatable :: ic0_bnd(:,:,:)
 real(kind_real) :: latbnd(2),lonbnd(2),v1(3),v2(3)
 real(kind_real),allocatable :: x(:),y(:),z(:),dist(:)
 logical :: init
-
-! Look for redundant or masked points TODO : change that
-call msi(redundant)
-do ic0=1,ndata%nc0
-   if (.not.isnotmsi(redundant(ic0))) then
-      do jc0=ic0+1,ndata%nc0
-         if ((abs(ndata%lon(ic0)-ndata%lon(jc0))<tiny(1.0)).and.(abs(ndata%lat(ic0)-ndata%lat(jc0))<tiny(1.0))) redundant(jc0) = ic0
-      end do
-   end if
-end do
-nc0 = count(.not.isnotmsi(redundant))
-
-! Allocation
-allocate(order(nc0))
-allocate(list(6*(nc0-2)))
-allocate(lptr(6*(nc0-2)))
-allocate(lend(nc0))
-allocate(near(nc0))
-allocate(next(nc0))
-allocate(x(nc0))
-allocate(y(nc0))
-allocate(z(nc0))
-allocate(dist(nc0))
-
-! Shuffle arrays (more efficient to compute the Delaunay triangulation)
-ic0 = 0
-do jc0=1,ndata%nc0
-   if (.not.isnotmsi(redundant(jc0))) then
-      ic0 = ic0+1
-      order(ic0) = jc0
-   end if
-end do
-do ic0=nc0,2,-1
-   call rand_integer(ndata%rng,1,nc0,jc0)
-   kc0 = order(jc0)
-   order(jc0) = order(ic0)
-   order(ic0) = kc0
-end do
-
-! Transform to cartesian coordinates
-call trans(nc0,ndata%lat(order),ndata%lon(order),x,y,z)
+type(meshtype) :: mesh
 
 ! Create mesh
-list = 0
-call trmesh(nc0,x,y,z,list,lptr,lend,lnew,near,next,dist,info)
+call create_mesh(ndata,ndata%nc0,ndata%lon,ndata%lat,mesh)
 
 if (.not.allocated(ndata%grid_nnb)) then
    ! Allocation
@@ -346,12 +305,12 @@ if (.not.allocated(ndata%grid_nnb)) then
 
    ! Count neighbors
    ndata%grid_nnb = 0
-   do ic0=1,nc0
-      i = lend(ic0)
+   do ic0=1,mesh%nnr
+      i = mesh%lend(ic0)
       init = .true.
-      do while ((i/=lend(ic0)).or.init)
-         ndata%grid_nnb(order(ic0)) = ndata%grid_nnb(order(ic0))+1
-         i = lptr(i)
+      do while ((i/=mesh%lend(ic0)).or.init)
+         ndata%grid_nnb(mesh%order(ic0)) = ndata%grid_nnb(mesh%order(ic0))+1
+         i = mesh%lptr(i)
          init = .false.
       end do
    end do
@@ -361,22 +320,22 @@ if (.not.allocated(ndata%grid_nnb)) then
 
    ! Find neighbors
    ndata%grid_nnb = 0
-   do ic0=1,nc0
-      i = lend(ic0)
+   do ic0=1,mesh%nnr
+      i = mesh%lend(ic0)
       init = .true.
-      do while ((i/=lend(ic0)).or.init)
-         ndata%grid_nnb(order(ic0)) = ndata%grid_nnb(order(ic0))+1
-         ndata%grid_inb(ndata%grid_nnb(order(ic0)),order(ic0)) = order(abs(list(i)))
-         i = lptr(i)
+      do while ((i/=mesh%lend(ic0)).or.init)
+         ndata%grid_nnb(mesh%order(ic0)) = ndata%grid_nnb(mesh%order(ic0))+1
+         ndata%grid_inb(ndata%grid_nnb(mesh%order(ic0)),mesh%order(ic0)) = mesh%order(abs(mesh%list(i)))
+         i = mesh%lptr(i)
          init = .false.
       end do
    end do
 
    ! Copy neighbors for redudant points
    do ic0=1,ndata%nc0
-      if (isnotmsi(redundant(ic0))) then
-         ndata%grid_nnb(ic0) = ndata%grid_nnb(redundant(ic0))
-         ndata%grid_inb(:,ic0) = ndata%grid_inb(:,redundant(ic0))
+      if (isnotmsi(mesh%redundant(ic0))) then
+         ndata%grid_nnb(ic0) = ndata%grid_nnb(mesh%redundant(ic0))
+         ndata%grid_inb(:,ic0) = ndata%grid_inb(:,mesh%redundant(ic0))
       end if
    end do
 end if
@@ -393,27 +352,27 @@ end do
 
 ! Allocation
 allocate(ndata%nbnd(ndata%nl0))
-allocate(ic0_bnd(2,nc0,ndata%nl0))
+allocate(ic0_bnd(2,mesh%nnr,ndata%nl0))
 
 ! Find border points
 do il0=1,ndata%nl0
    ndata%nbnd(il0) = 0
-   do ic0=1,nc0
+   do ic0=1,mesh%nnr
       ! Check mask points only
-      if (.not.ndata%mask(order(ic0),il0)) then
-         i = lend(ic0)
+      if (.not.ndata%mask(mesh%order(ic0),il0)) then
+         i = mesh%lend(ic0)
          init = .true.
-         do while ((i/=lend(ic0)).or.init)
-            jc0 = abs(list(i))
-            kc0 = abs(list(lptr(i)))
-            if (.not.ndata%mask(order(jc0),il0).and.ndata%mask(order(kc0),il0)) then
+         do while ((i/=mesh%lend(ic0)).or.init)
+            jc0 = abs(mesh%list(i))
+            kc0 = abs(mesh%list(mesh%lptr(i)))
+            if (.not.ndata%mask(mesh%order(jc0),il0).and.ndata%mask(mesh%order(kc0),il0)) then
                ! Create a new boundary arc
                ndata%nbnd(il0) = ndata%nbnd(il0)+1
-               if (ndata%nbnd(il0)>nc0) call msgerror('too many boundary arcs')
-               ic0_bnd(1,ndata%nbnd(il0),il0) = order(ic0)
-               ic0_bnd(2,ndata%nbnd(il0),il0) = order(jc0)
+               if (ndata%nbnd(il0)>mesh%nnr) call msgerror('too many boundary arcs')
+               ic0_bnd(1,ndata%nbnd(il0),il0) = mesh%order(ic0)
+               ic0_bnd(2,ndata%nbnd(il0),il0) = mesh%order(jc0)
             end if
-            i = lptr(i)
+            i = mesh%lptr(i)
             init = .false.
          end do
       end if
