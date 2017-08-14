@@ -11,7 +11,7 @@ module purge
 unsetenv LD_LIBRARY_PATH
 
 # Load modules
-module load gnu mpich/3.2 cmake/3.7.2
+module load gnu cmake/3.7.2 netcdf
 module list
 
 # Define lapack path
@@ -25,16 +25,26 @@ setenv EIGEN3_INCLUDE_DIR /glade/p/ral/nsap/jcsda/code/eigen/build
 # Need boost library
 setenv BOOST_ROOT /glade/p/ral/nsap/jcsda/code/boost_1_64_0
 
+# Need ESMF library
+setenv ESMF_PATH /glade/p/work/svasquez/esmf_install/esmf_710bs33_gnu_openmpi_netcdf_O
+setenv ESMF_LIBRARIES ${ESMF_PATH}/lib/libO/Linux.gfortran.64.openmpi.default/libesmf.a
+setenv ESMF_INCLUDE_DIR ${ESMF_PATH}/mod/modO/Linux.gfortran.64.openmpi.default
+
+# Need NETCDF library
+setenv NETCDF_LIBRARIES "${NETCDF}/lib/libnetcdf.a;${NETCDF}/lib/libnetcdff.a"
+
+# Need proper openmpi binaries
+setenv OPENMPI_BINDIR "/glade/p/work/xinzhang/common_libs/bin"
+
 setenv SRC $PWD
 setenv BUILD ${SRC}/build
 
 rm -rf ${BUILD}; mkdir ${BUILD}; cd ${BUILD}
 
-
-set path = (${path} ${SRC}/ecbuild/bin $EIGEN3_INCLUDE_DIR) # ~gvernier/boost/build/bin)
+set path = (${path} ${SRC}/ecbuild/bin $EIGEN3_INCLUDE_DIR)
 
 # configure
-ecbuild --build=debug -DBOOST_ROOT=$BOOST_ROOT -DBoost_NO_SYSTEM_PATHS=ON -DLAPACK_PATH=$LAPACK_PATH -DLAPACK_LIBRARIES=$LAPACK_LIBRARIES ${SRC}
+ecbuild --build=debug -DCMAKE_CXX_COMPILER=${OPENMPI_BINDIR}/mpicxx -DCMAKE_C_COMPILER=${OPENMPI_BINDIR}/mpicc -DCMAKE_Fortran_COMPILER=${OPENMPI_BINDIR}/mpifort -DBOOST_ROOT=$BOOST_ROOT -DBoost_NO_SYSTEM_PATHS=ON -DLAPACK_PATH=$LAPACK_PATH -DLAPACK_LIBRARIES=$LAPACK_LIBRARIES -DESMF_LIBRARY=${ESMF_LIBRARIES} -DESMF_INCLUDE_DIR=${ESMF_INCLUDE_DIR} -NETCDF_LIBRARIES=${NETCDF_LIBRARIES} -DNETCDF_PATH=${NETCDF} ${SRC}
 
 # Compile
 make VERBOSE=1 -j4
