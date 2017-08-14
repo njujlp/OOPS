@@ -168,8 +168,14 @@ subroutine c_wrf_geo_delete(c_key_self) bind(c,name='wrf_geo_delete_f90')
 
 implicit none
 integer(c_int), intent(inout) :: c_key_self     
+type(wrf_geom), pointer :: self     
 
-call wrf_geom_registry%remove(c_key_self)
+    call wrf_geom_registry%get(c_key_self , self )
+    if (allocated(self%lon))  deallocate(self%lon)
+    if (allocated(self%lat))  deallocate(self%lat)
+    if (allocated(self%mask)) deallocate(self%mask)
+    if (allocated(self%pres)) deallocate(self%pres)
+    call wrf_geom_registry%remove(c_key_self)
 
 end subroutine c_wrf_geo_delete
 
