@@ -84,8 +84,8 @@ find_package( NetCDF REQUIRED )
 include_directories( ${NETCDF_INCLUDE_DIR} )
 
 # ESMF
-find_package( ESMF REQUIRED )
-include_directories( ${ESMF_INCLUDE_DIR} )
+#find_package( ESMF REQUIRED )
+#include_directories( ${ESMF_INCLUDE_DIR} )
 
 # OpenMP
 find_package( OpenMP REQUIRED )
