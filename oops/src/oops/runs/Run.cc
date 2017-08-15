@@ -34,7 +34,7 @@ namespace oops {
 // -----------------------------------------------------------------------------
 
 Run::Run(int argc, char** argv) : eckit::Main(argc, argv, "OOPS_HOME"), config_(), timer_() {
-// Run MPI for NICAS
+// Start MPI for NICAS
   mpl_start_f90();
 
 // Get configuration file from command line

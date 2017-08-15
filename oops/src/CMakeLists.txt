@@ -173,6 +173,7 @@ oops/generic/nicas/module_apply_com.f90
 oops/generic/nicas/module_apply_convol.f90
 oops/generic/nicas/module_apply_interp.f90
 oops/generic/nicas/module_apply_nicas.f90
+oops/generic/nicas/module_apply_nicas_sqrt.f90
 oops/generic/nicas/module_mpi.f90
 oops/generic/nicas/module_namelist.f90
 oops/generic/nicas/module_normalization.f90
@@ -192,16 +193,16 @@ oops/generic/nicas/type_ctree.cpp
 oops/generic/nicas/type_ctree.f90
 oops/generic/nicas/type_ctree.h
 oops/generic/nicas/type_ctree.hpp
-oops/generic/nicas/type_esmf.f90
 oops/generic/nicas/type_fields.f90
 oops/generic/nicas/type_linop.f90
+oops/generic/nicas/type_mesh.f90
 oops/generic/nicas/type_mpl.f90
+oops/generic/nicas/type_ndata.f90
 oops/generic/nicas/type_randgen_api.cpp
 oops/generic/nicas/type_randgen.cpp
 oops/generic/nicas/type_randgen.f90
 oops/generic/nicas/type_randgen.h
 oops/generic/nicas/type_randgen.hpp
-oops/generic/nicas/type_sdata.f90
 oops/generic/nicas/type_timer.f90
 oops/generic/nicas/external/Cover_Tree.h
 oops/generic/nicas/external/Cover_Tree_Point.cpp
@@ -285,7 +286,7 @@ ecbuild_add_library( TARGET     oops
                      SOURCES    
                                 ${FORTRAN_BINDINGS}
                                 ${oops_src_files}
-                     LIBS       ${LIBXML2_LIBRARIES} ${LAPACK_LIBRARIES} ${NETCDF_LIBRARIES} ${ESMF_LIBRARIES} fckit eckit_mpi eckit
+                     LIBS       ${LIBXML2_LIBRARIES} ${LAPACK_LIBRARIES} ${NETCDF_LIBRARIES} fckit eckit_mpi eckit
                      INSTALL_HEADERS LISTED
                      LINKER_LANGUAGE ${OOPS_LINKER_LANGUAGE}
                    )

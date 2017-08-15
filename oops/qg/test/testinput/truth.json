@@ -3,12 +3,12 @@
     "categories": "Info, Test, Warning, Error"
   },
   "resolution": {
-    "nx": "160",
-    "ny": "80",
+    "nx": "40",
+    "ny": "20",
     "bc": "1"
   },
   "model": {
-    "tstep": "PT05M",
+    "tstep": "PT10M",
     "top_layer_depth": "6000.0",
     "bottom_layer_depth": "4000.0"
   },
