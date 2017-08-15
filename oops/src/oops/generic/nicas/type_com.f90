@@ -117,8 +117,6 @@ character(len=1024) :: subr = 'com_read'
 com%prefix = trim(prefix)
 
 ! Get dimensions
-call ncerr(subr,nf90_inq_dimid(ncid,'nproc',nproc_id))
-call ncerr(subr,nf90_inquire_dimension(ncid,nproc_id,len=nam%nproc))
 info = nf90_inq_dimid(ncid,trim(prefix)//'_nhalo',nhalo_id)
 if (info==nf90_noerr) then
    call ncerr(subr,nf90_inquire_dimension(ncid,nhalo_id,len=com%nhalo))

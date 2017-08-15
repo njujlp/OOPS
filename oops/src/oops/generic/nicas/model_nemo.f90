@@ -85,31 +85,33 @@ end do
 lon = lon*real(deg2rad,kind=4)
 lat = lat*real(deg2rad,kind=4)
 
-! Find grid neighbors
-allocate(ndata%grid_nnb(ndata%nc0))
-ndata%grid_nnb = 8
-allocate(ndata%grid_inb(8,ndata%nc0))
-do ilat=1,ndata%nlat
-   do ilon=1,ndata%nlon
-      ic0 = (ilat-1)*ndata%nlon+ilon
-      i = 0
-      do jlat=ilat-1,ilat+1
-         klat = jlat
-         if (klat==0) klat = ndata%nlat
-         if (klat==ndata%nlat+1) klat = 1
-         do jlon=ilon-1,ilon+1
-            klon = jlon
-            if (klon==0) klon = ndata%nlon
-            if (klon==ndata%nlon+1) klon = 1
-            if ((jlat/=ilat).or.(jlon/=ilon)) then
-               i = i+1
-               jc0 = (klat-1)*ndata%nlon+klon
-               ndata%grid_inb(i,ic0) = jc0
-            end if
+if (nam%network) then
+   ! Find grid neighbors
+   allocate(ndata%net_nnb(ndata%nc0))
+   ndata%net_nnb = 8
+   allocate(ndata%net_inb(8,ndata%nc0))
+   do ilat=1,ndata%nlat
+      do ilon=1,ndata%nlon
+         ic0 = (ilat-1)*ndata%nlon+ilon
+         i = 0
+         do jlat=ilat-1,ilat+1
+            klat = jlat
+            if (klat==0) klat = ndata%nlat
+            if (klat==ndata%nlat+1) klat = 1
+            do jlon=ilon-1,ilon+1
+               klon = jlon
+               if (klon==0) klon = ndata%nlon
+               if (klon==ndata%nlon+1) klon = 1
+               if ((jlat/=ilat).or.(jlon/=ilon)) then
+                  i = i+1
+                  jc0 = (klat-1)*ndata%nlon+klon
+                  ndata%net_inb(i,ic0) = jc0
+               end if
+            end do
          end do
       end do
    end do
-end do
+end if
 
 ! Pack
 call ndata_alloc(ndata)

@@ -339,7 +339,7 @@ do il1=1,ndata%nl1
    ! Check mask boundaries
    if (nam%mask_check) then
       call check_mask_bnd(ndata,stmp,valid,ndata%il1_to_il0(il1), &
-    & row_to_ic0=ndata%ic1_to_ic0,col_to_ic0=ndata%ic1_to_ic0(ndata%ic2il1_to_ic1(:,il1)))
+    & row_to_ic0=ndata%ic1_to_ic0,col_to_ic0=ndata%ic1_to_ic0(ndata%ic2il1_to_ic1(1:ndata%nc2(il1),il1)))
    else
       write(mpl%unit,'(a10,a,i3)') '','Level ',nam%levs(ndata%il1_to_il0(il1))
    end if
@@ -459,7 +459,7 @@ type(ctreetype) :: ctree
 type(meshtype) :: mesh
 
 ! Create mesh
-call create_mesh(ndata,n_src,lon_src,lat_src,mesh)
+call create_mesh(ndata,n_src,lon_src,lat_src,.false.,mesh)
 
 ! Compute cover tree
 allocate(mask_ctree(mesh%nnr))
@@ -527,8 +527,8 @@ implicit none
 type(ndatatype),intent(in) :: ndata          !< Sampling data
 type(linoptype),intent(inout) :: interp          !< Interpolation
 logical,intent(inout) :: valid(interp%n_s)   !< Valid vector
-integer,intent(in),optional :: row_to_ic0(:) !< Conversion from row to ic0 (identity if missing)
-integer,intent(in),optional :: col_to_ic0(:) !< Conversion from col to ic0 (identity if missing)
+integer,intent(in),optional :: row_to_ic0(interp%n_dst) !< Conversion from row to ic0 (identity if missing)
+integer,intent(in),optional :: col_to_ic0(interp%n_src) !< Conversion from col to ic0 (identity if missing)
 
 ! Local variables
 integer :: ic0,ic1,i_s,ibnd,jc0,jc1,progint,il0

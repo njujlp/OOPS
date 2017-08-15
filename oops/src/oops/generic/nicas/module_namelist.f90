@@ -189,7 +189,7 @@ if (mpl%main) then
    nam%ndir = ndir
    nam%dirlev = dirlev
    nam%dirlon = dirlon
-   nam%dirlat = -dirlat
+   nam%dirlat = dirlat
    nam%sam_default_seed = sam_default_seed
    nam%mask_check = mask_check
    nam%ntry = ntry

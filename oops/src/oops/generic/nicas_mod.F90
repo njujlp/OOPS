@@ -236,20 +236,20 @@ implicit none
 type(nicas), intent(in) :: self
 type(unstructured_grid), intent(inout) :: dx
 
-!integer :: ncol
-!type(column_element), pointer :: current, prev
+integer :: ncol
+type(column_element), pointer :: current, prev
 
 ! Multiply with NICAS
 call log%info("NICAS multiply")
 
 ! Count columns
-!current = dx%head
-!ncol = 0
-!do while (associated(current))
-!   ncol = ncol+1
-!   current => current%next
-!end do
-!write(*,*) "Number of columns:",ncol
+current => dx%head
+ncol = 0
+do while (associated(current))
+   ncol = ncol+1
+   current => current%next
+end do
+write(*,*) "Number of columns:",ncol
 ! Allocation
 
 

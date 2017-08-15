@@ -16,7 +16,7 @@ use module_apply_interp, only: interp,interp_ad
 use module_apply_nicas_sqrt, only: apply_nicas_sqrt,apply_nicas_sqrt_ad
 use module_namelist, only: nam
 use tools_kinds, only: kind_real
-use type_mpl, only: mpl
+use type_mpl, only: mpl,mpl_barrier
 use type_ndata, only: ndatatype,ndataloctype
 
 implicit none
@@ -84,10 +84,10 @@ allocate(alpha(ndataloc%nsb))
 call interp_ad(ndataloc,fld,alpha)
 
 ! Communication
-if (ndataloc%mpicom==1) then
+if (nam%mpicom==1) then
    ! Copy zone B into zone C
    call alpha_copy_BC(ndataloc,alpha)
-elseif (ndataloc%mpicom==2) then
+elseif (nam%mpicom==2) then
    ! Halo reduction from zone B to zone A
    call alpha_com_BA(ndataloc,alpha)
 

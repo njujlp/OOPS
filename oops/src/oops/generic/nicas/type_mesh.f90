@@ -43,7 +43,7 @@ contains
 ! Subroutine: create_mesh
 !> Purpose: create mesh
 !----------------------------------------------------------------------
-subroutine create_mesh(ndata,n,lon,lat,mesh)
+subroutine create_mesh(ndata,n,lon,lat,lred,mesh)
 
 implicit none
 
@@ -52,6 +52,7 @@ type(ndatatype),intent(in) :: ndata
 integer,intent(in) :: n
 real(kind_real),intent(in) :: lon(n)
 real(kind_real),intent(in) :: lat(n)
+logical,intent(in) :: lred
 type(meshtype),intent(inout) :: mesh
 
 ! Local variables
@@ -59,18 +60,17 @@ integer :: i,j,k,lnew,info
 integer,allocatable :: near(:),next(:)
 real(kind_real),allocatable :: dist(:)
 
-! Look for redundant or masked points TODO : change that, make it parallel?
+! Look for redundant points TODO : change that, make it parallel?
 allocate(mesh%redundant(n))
 call msi(mesh%redundant)
-if (.false.) then
-do i=1,n
-   if (.not.isnotmsi(mesh%redundant(i))) then
-      do j=i+1,n
-         if ((abs(lon(i)-lon(j))<tiny(1.0)).and. &
-       & (abs(lat(i)-lat(j))<tiny(1.0))) mesh%redundant(j) = i
-      end do
-   end if
-end do
+if (lred) then
+   do i=1,n
+      if (.not.isnotmsi(mesh%redundant(i))) then
+         do j=i+1,n
+            if ((abs(lon(i)-lon(j))<tiny(1.0)).and.(abs(lat(i)-lat(j))<tiny(1.0))) mesh%redundant(j) = i
+         end do
+      end if
+   end do
 end if
 mesh%nnr = count(.not.isnotmsi(mesh%redundant))
 

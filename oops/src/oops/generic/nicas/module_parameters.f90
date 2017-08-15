@@ -56,7 +56,12 @@ real(kind_real),allocatable :: rh1(:,:),rv1(:,:),rh2(:,:),rv2(:,:),rhs(:),rvs(:)
 ! Forced points in the subrid (TODO: rethink that)
 ndata%nfor = 1
 allocate(ndata%ifor(ndata%nfor))
-ndata%ifor(1) = 1
+do ic0=1,ndata%nc0
+   if (all(ndata%mask(ic0,:))) then
+      ndata%ifor(1) = ic0
+      exit
+   end if
+end do
 
 ! Compute adaptive sampling
 write(mpl%unit,'(a7,a)') '','Compute adaptive sampling'
@@ -297,107 +302,111 @@ logical :: init
 type(meshtype) :: mesh
 
 ! Create mesh
-call create_mesh(ndata,ndata%nc0,ndata%lon,ndata%lat,mesh)
+if (nam%mask_check.or.nam%network) call create_mesh(ndata,ndata%nc0,ndata%lon,ndata%lat,.true.,mesh)
 
-if (.not.allocated(ndata%grid_nnb)) then
-   ! Allocation
-   allocate(ndata%grid_nnb(ndata%nc0))
-
-   ! Count neighbors
-   ndata%grid_nnb = 0
-   do ic0=1,mesh%nnr
-      i = mesh%lend(ic0)
-      init = .true.
-      do while ((i/=mesh%lend(ic0)).or.init)
-         ndata%grid_nnb(mesh%order(ic0)) = ndata%grid_nnb(mesh%order(ic0))+1
-         i = mesh%lptr(i)
-         init = .false.
-      end do
-   end do
-
-   ! Allocation
-   allocate(ndata%grid_inb(maxval(ndata%grid_nnb),ndata%nc0))
-
-   ! Find neighbors
-   ndata%grid_nnb = 0
-   do ic0=1,mesh%nnr
-      i = mesh%lend(ic0)
-      init = .true.
-      do while ((i/=mesh%lend(ic0)).or.init)
-         ndata%grid_nnb(mesh%order(ic0)) = ndata%grid_nnb(mesh%order(ic0))+1
-         ndata%grid_inb(ndata%grid_nnb(mesh%order(ic0)),mesh%order(ic0)) = mesh%order(abs(mesh%list(i)))
-         i = mesh%lptr(i)
-         init = .false.
-      end do
-   end do
-
-   ! Copy neighbors for redudant points
+if (nam%network) then
+   ! Compute distances
+   allocate(ndata%net_dnb(maxval(ndata%net_nnb),ndata%nc0))
    do ic0=1,ndata%nc0
-      if (isnotmsi(mesh%redundant(ic0))) then
-         ndata%grid_nnb(ic0) = ndata%grid_nnb(mesh%redundant(ic0))
-         ndata%grid_inb(:,ic0) = ndata%grid_inb(:,mesh%redundant(ic0))
-      end if
+      do i=1,ndata%net_nnb(ic0)
+         call sphere_dist(ndata%lon(ic0),ndata%lat(ic0),ndata%lon(ndata%net_inb(i,ic0)), &
+       & ndata%lat(ndata%net_inb(i,ic0)),ndata%net_dnb(i,ic0))
+         ndata%net_dnb(i,ic0) = (ndata%net_dnb(i,ic0)/req)**2
+      end do
    end do
-end if
 
-! Compute distances
-allocate(ndata%grid_dnb(maxval(ndata%grid_nnb),ndata%nc0))
-do ic0=1,ndata%nc0
-   do i=1,ndata%grid_nnb(ic0)
-      call sphere_dist(ndata%lon(ic0),ndata%lat(ic0),ndata%lon(ndata%grid_inb(i,ic0)), &
-    & ndata%lat(ndata%grid_inb(i,ic0)),ndata%grid_dnb(i,ic0))
-      ndata%grid_dnb(i,ic0) = (ndata%grid_dnb(i,ic0)/req)**2
-   end do
-end do
-
-! Allocation
-allocate(ndata%nbnd(ndata%nl0))
-allocate(ic0_bnd(2,mesh%nnr,ndata%nl0))
-
-! Find border points
-do il0=1,ndata%nl0
-   ndata%nbnd(il0) = 0
-   do ic0=1,mesh%nnr
-      ! Check mask points only
-      if (.not.ndata%mask(mesh%order(ic0),il0)) then
+   if (.not.allocated(ndata%net_nnb)) then
+      ! Allocation
+      allocate(ndata%net_nnb(ndata%nc0))
+   
+      ! Count neighbors
+      ndata%net_nnb = 0
+      do ic0=1,mesh%nnr
          i = mesh%lend(ic0)
          init = .true.
          do while ((i/=mesh%lend(ic0)).or.init)
-            jc0 = abs(mesh%list(i))
-            kc0 = abs(mesh%list(mesh%lptr(i)))
-            if (.not.ndata%mask(mesh%order(jc0),il0).and.ndata%mask(mesh%order(kc0),il0)) then
-               ! Create a new boundary arc
-               ndata%nbnd(il0) = ndata%nbnd(il0)+1
-               if (ndata%nbnd(il0)>mesh%nnr) call msgerror('too many boundary arcs')
-               ic0_bnd(1,ndata%nbnd(il0),il0) = mesh%order(ic0)
-               ic0_bnd(2,ndata%nbnd(il0),il0) = mesh%order(jc0)
-            end if
+            ndata%net_nnb(mesh%order(ic0)) = ndata%net_nnb(mesh%order(ic0))+1
             i = mesh%lptr(i)
             init = .false.
          end do
-      end if
-   end do
-end do
+      end do
+   
+      ! Allocation
+      allocate(ndata%net_inb(maxval(ndata%net_nnb),ndata%nc0))
+   
+      ! Find neighbors
+      ndata%net_nnb = 0
+      do ic0=1,mesh%nnr
+         i = mesh%lend(ic0)
+         init = .true.
+         do while ((i/=mesh%lend(ic0)).or.init)
+            ndata%net_nnb(mesh%order(ic0)) = ndata%net_nnb(mesh%order(ic0))+1
+            ndata%net_inb(ndata%net_nnb(mesh%order(ic0)),mesh%order(ic0)) = mesh%order(abs(mesh%list(i)))
+            i = mesh%lptr(i)
+            init = .false.
+         end do
+      end do
+   
+      ! Copy neighbors for redudant points
+      do ic0=1,ndata%nc0
+         if (isnotmsi(mesh%redundant(ic0))) then
+            ndata%net_nnb(ic0) = ndata%net_nnb(mesh%redundant(ic0))
+            ndata%net_inb(:,ic0) = ndata%net_inb(:,mesh%redundant(ic0))
+         end if
+      end do
+   end if
+end if
 
-! Allocation
-allocate(ndata%xbnd(2,maxval(ndata%nbnd),ndata%nl0))
-allocate(ndata%ybnd(2,maxval(ndata%nbnd),ndata%nl0))
-allocate(ndata%zbnd(2,maxval(ndata%nbnd),ndata%nl0))
-allocate(ndata%vbnd(3,maxval(ndata%nbnd),ndata%nl0))
-
-do il0=1,ndata%nl0
-   ! Compute boundary arcs
-   do ibnd=1,ndata%nbnd(il0)
-      latbnd = ndata%lat(ic0_bnd(:,ibnd,il0))
-      lonbnd = ndata%lon(ic0_bnd(:,ibnd,il0))
-      call trans(2,latbnd,lonbnd,ndata%xbnd(:,ibnd,il0),ndata%ybnd(:,ibnd,il0),ndata%zbnd(:,ibnd,il0))
+if (nam%mask_check) then
+   ! Allocation
+   allocate(ndata%nbnd(ndata%nl0))
+   allocate(ic0_bnd(2,mesh%nnr,ndata%nl0))
+   
+   ! Find border points
+   do il0=1,ndata%nl0
+      ndata%nbnd(il0) = 0
+      do ic0=1,mesh%nnr
+         ! Check mask points only
+         if (.not.ndata%mask(mesh%order(ic0),il0)) then
+            i = mesh%lend(ic0)
+            init = .true.
+            do while ((i/=mesh%lend(ic0)).or.init)
+               jc0 = abs(mesh%list(i))
+               kc0 = abs(mesh%list(mesh%lptr(i)))
+               if (.not.ndata%mask(mesh%order(jc0),il0).and.ndata%mask(mesh%order(kc0),il0)) then
+                  ! Create a new boundary arc
+                  ndata%nbnd(il0) = ndata%nbnd(il0)+1
+                  if (ndata%nbnd(il0)>mesh%nnr) call msgerror('too many boundary arcs')
+                  ic0_bnd(1,ndata%nbnd(il0),il0) = mesh%order(ic0)
+                  ic0_bnd(2,ndata%nbnd(il0),il0) = mesh%order(jc0)
+               end if
+               i = mesh%lptr(i)
+               init = .false.
+            end do
+         end if
+      end do
    end do
-   do ibnd=1,ndata%nbnd(il0)
-      v1 = (/ndata%xbnd(1,ibnd,il0),ndata%ybnd(1,ibnd,il0),ndata%zbnd(1,ibnd,il0)/)
-      v2 = (/ndata%xbnd(2,ibnd,il0),ndata%ybnd(2,ibnd,il0),ndata%zbnd(2,ibnd,il0)/)
-      call vector_product(v1,v2,ndata%vbnd(:,ibnd,il0))
+   
+   ! Allocation
+   allocate(ndata%xbnd(2,maxval(ndata%nbnd),ndata%nl0))
+   allocate(ndata%ybnd(2,maxval(ndata%nbnd),ndata%nl0))
+   allocate(ndata%zbnd(2,maxval(ndata%nbnd),ndata%nl0))
+   allocate(ndata%vbnd(3,maxval(ndata%nbnd),ndata%nl0))
+   
+   do il0=1,ndata%nl0
+      ! Compute boundary arcs
+      do ibnd=1,ndata%nbnd(il0)
+         latbnd = ndata%lat(ic0_bnd(:,ibnd,il0))
+         lonbnd = ndata%lon(ic0_bnd(:,ibnd,il0))
+         call trans(2,latbnd,lonbnd,ndata%xbnd(:,ibnd,il0),ndata%ybnd(:,ibnd,il0),ndata%zbnd(:,ibnd,il0))
+      end do
+      do ibnd=1,ndata%nbnd(il0)
+         v1 = (/ndata%xbnd(1,ibnd,il0),ndata%ybnd(1,ibnd,il0),ndata%zbnd(1,ibnd,il0)/)
+         v2 = (/ndata%xbnd(2,ibnd,il0),ndata%ybnd(2,ibnd,il0),ndata%zbnd(2,ibnd,il0)/)
+         call vector_product(v1,v2,ndata%vbnd(:,ibnd,il0))
+      end do
    end do
-end do
+end if
 
 end subroutine compute_grid_mesh
 

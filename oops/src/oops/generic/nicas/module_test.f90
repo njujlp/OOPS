@@ -399,44 +399,41 @@ call random_number(fld)
 call timer_start(timer_interp_ad)
 call interp_ad(ndataloc,fld,alpha)
 call timer_end(timer_interp_ad)
-print*, 'ok'
+
 ! Communication
 call timer_start(timer_com_1)
-if (ndataloc%mpicom==1) then
+if (nam%mpicom==1) then
    ! Copy zone B into zone C
    call alpha_copy_BC(ndataloc,alpha)
-print*, 'ik'
-elseif (ndataloc%mpicom==2) then
+elseif (nam%mpicom==2) then
    ! Halo reduction from zone B to zone A
    call alpha_com_BA(ndataloc,alpha)
-print*, 'uk'
    ! Copy zone A into zone C
    call alpha_copy_AC(ndataloc,alpha)
 end if
-print*, 'ok'
 call timer_end(timer_com_1)
-print*, 'ok'
+
 ! Convolution
 call timer_start(timer_convol)
 call convol(ndataloc,alpha)
 call timer_start(timer_convol)
-print*, 'ok'
+
 call timer_start(timer_com_2)
 ! Halo reduction from zone C to zone A
 call alpha_com_CA(ndataloc,alpha)
-print*, 'ok'
+
 ! Halo extension from zone A to zone B
 call alpha_com_AB(ndataloc,alpha)
 call timer_end(timer_com_2)
-print*, 'ok'
+
 ! Interpolation
 call timer_start(timer_interp)
 call interp(ndataloc,alpha,fld)
 call timer_end(timer_interp)
-print*, 'ok'
+
 ! Release memory
 deallocate(alpha)
-print*, 'ok'
+
 ! Print results
 write(mpl%unit,'(a7,a)') '','Performance results (elapsed time):'
 write(mpl%unit,'(a10,a,f6.1,a)') '','Adjoint interpolation: ',timer_interp_ad%elapsed,' s'

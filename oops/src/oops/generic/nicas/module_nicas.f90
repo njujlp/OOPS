@@ -43,7 +43,7 @@ type(ndataloctype),intent(inout) :: ndataloc !< Sampling data,local
 ! Local variables
 integer :: il0,iproc
 logical :: same_mask
-type(ndataloctype) :: ndataloc_arr((nam%nproc))
+type(ndataloctype),allocatable :: ndataloc_arr(:)
 
 ! Determine whether the model is regional
 ndata%regional = all(ndata%area<4.0*pi)
@@ -112,6 +112,9 @@ write(mpl%unit,'(a)') '--- Read NICAS local distribution'
 call ndata_read_local(ndata)
 
 if (nam%new_mpi) then
+   ! Allocation
+   allocate(ndataloc_arr(nam%nproc))
+
    !----------------------------------------------------------------------
    ! Compute NICAS MPI distribution
    !----------------------------------------------------------------------
@@ -147,7 +150,10 @@ if (nam%new_mpi) then
 
       ! Release memory
       call ndataloc_dealloc(ndataloc_arr(iproc))     
-   end do 
+   end do
+
+   ! Release memory
+   deallocate(ndataloc_arr)
 else
    !----------------------------------------------------------------------
    ! Read NICAS MPI distribution
@@ -160,7 +166,7 @@ else
 end if
 
 ! Release memory
-if (.not.mpl%main) call ndata_dealloc(ndata)
+!if (.not.mpl%main) call ndata_dealloc(ndata) TODO
 
 if (nam%check_adjoints) then
    !----------------------------------------------------------------------
@@ -214,7 +220,7 @@ if (nam%check_perf) then
    write(mpl%unit,'(a)') '-------------------------------------------------------------------'
    write(mpl%unit,'(a)') '--- Test NICAS performance'
 
-   if (mpl%main) call test_perf(ndataloc)
+   call test_perf(ndataloc)
 end if
 
 ! Flush units

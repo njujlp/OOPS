@@ -44,9 +44,9 @@ type ndatatype
 
    ! Sampling properties
    logical,allocatable :: llev(:)          !< Vertical interpolation key
-   integer,allocatable :: grid_nnb(:)      !< Number of neighbors on the full grid
-   integer,allocatable :: grid_inb(:,:)    !< Neighbors indices on the full grid
-   real(kind_real),allocatable :: grid_dnb(:,:)       !< Neighbors distances on the full grid
+   integer,allocatable :: net_nnb(:)      !< Number of neighbors on the full grid
+   integer,allocatable :: net_inb(:,:)    !< Neighbors indices on the full grid
+   real(kind_real),allocatable :: net_dnb(:,:)       !< Neighbors distances on the full grid
 
    ! Boundary nodes
    integer,allocatable :: nbnd(:)          !< Number of boundary nodes
@@ -141,7 +141,6 @@ type ndataloctype
    real(kind_real),allocatable :: norm_sqrt(:) !< Internal normalization factor for the square-root formulation
 
    ! Communications
-   integer :: mpicom                     !< Number of communication steps
    type(comtype) :: AB                   !< Communication between halos A and B
    type(comtype) :: AC                   !< Communication between halos A and C
 end type ndataloctype
@@ -268,7 +267,6 @@ ndataloc_out%nl0i = ndataloc_in%nl0i
 ndataloc_out%nsa = ndataloc_in%nsa
 ndataloc_out%nsb = ndataloc_in%nsb
 ndataloc_out%nsc = ndataloc_in%nsc
-ndataloc_out%mpicom = ndataloc_in%mpicom
 
 ! Deallocation
 call ndataloc_dealloc(ndataloc_out)
@@ -422,7 +420,7 @@ implicit none
 type(ndatatype),intent(inout) :: ndata !< Sampling data
 
 ! Local variables
-integer :: ic0,info,nc0amax,iproc,ic0a
+integer :: ic0,info,iproc,ic0a
 integer :: ncid,ic0_to_iproc_id,ic0_to_ic0a_id
 character(len=4) :: nprocchar
 character(len=1024) :: filename
@@ -452,18 +450,18 @@ elseif (nam%nproc>1) then
       call ncerr(subr,nf90_get_var(ncid,ic0_to_iproc_id,ndata%ic0_to_iproc))
       call ncerr(subr,nf90_get_var(ncid,ic0_to_ic0a_id,ndata%ic0_to_ic0a))
       call ncerr(subr,nf90_close(ncid))
-      nc0amax = maxval(ndata%ic0_to_ic0a)
+      ndata%nc0amax = maxval(ndata%ic0_to_ic0a)
    else
       ! Generate a distribution (use METIS one day?)
-      nc0amax = ndata%nc0/nam%nproc
-      if (nc0amax*nam%nproc<ndata%nc0) nc0amax = nc0amax+1
+      ndata%nc0amax = ndata%nc0/nam%nproc
+      if (ndata%nc0amax*nam%nproc<ndata%nc0) ndata%nc0amax = ndata%nc0amax+1
       iproc = 1
       ic0a = 1
       do ic0=1,ndata%nc0
          ndata%ic0_to_iproc(ic0) = iproc
          ndata%ic0_to_ic0a(ic0) = ic0a
          ic0a = ic0a+1
-         if (ic0a>nc0amax) then
+         if (ic0a>ndata%nc0amax) then
             ! Change proc
             iproc = iproc+1
             ic0a = 1
@@ -561,10 +559,8 @@ if (ndataloc%nsb>0) call ncerr(subr,nf90_get_var(ncid,isb_to_isc_id,ndataloc%isb
 call ncerr(subr,nf90_get_var(ncid,norm_id,ndataloc%norm))
 
 ! Read communications
-if (nam%nproc>1) then
-   call com_read(ncid,'AB',ndataloc%AB)
-   call com_read(ncid,'AC',ndataloc%AC)
-end if
+call com_read(ncid,'AB',ndataloc%AB)
+call com_read(ncid,'AC',ndataloc%AC)
 
 ! Read linear operators
 call linop_read(ncid,'c',ndataloc%c)
@@ -743,10 +739,8 @@ do iproc=1,nam%nproc
    call ncerr(subr,nf90_put_var(ncid,norm_id,ndataloc(iproc)%norm))
 
    ! Write communications
-   if (nam%nproc>1) then
-      call com_write(ncid,ndataloc(iproc)%AB)
-      call com_write(ncid,ndataloc(iproc)%AC)
-   end if
+   call com_write(ncid,ndataloc(iproc)%AB)
+   call com_write(ncid,ndataloc(iproc)%AC)
 
    ! Write linear operators
    call linop_write(ncid,ndataloc(iproc)%c)

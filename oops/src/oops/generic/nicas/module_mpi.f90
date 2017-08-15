@@ -15,7 +15,7 @@ use netcdf
 use omp_lib
 use tools_const, only: pi,rad2deg,req,sphere_dist
 use tools_display, only: msgerror,prog_init,prog_print
-use tools_missing, only: msvali,msvalr,msi,msr,isnotmsr
+use tools_missing, only: msvali,msvalr,msi,msr,isnotmsr,isnotmsi
 use tools_nc, only: ncfloat,ncerr
 use type_linop, only: linop_alloc,linop_reorder
 use type_mpl, only: mpl
@@ -100,11 +100,10 @@ do il0i=1,ndata%nl0i
 end do
 
 do iproc=1,nam%nproc
-   ! Copy number of levels and number of communication steps
+   ! Copy number of levels
    ndataloc_arr(iproc)%nl0 = ndata%nl0
    ndataloc_arr(iproc)%nl1 = ndata%nl1
    ndataloc_arr(iproc)%nl0i = ndata%nl0i
-   ndataloc_arr(iproc)%mpicom = nam%mpicom
 
    ! Allocation
    allocate(ndataloc_arr(iproc)%nc2b(ndataloc_arr(iproc)%nl1))
