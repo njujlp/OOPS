@@ -31,8 +31,7 @@ type ndatatype
    integer :: nlat                         !< Latitude size
    integer :: nlev                         !< Number of levels
    logical,allocatable :: rgmask(:,:)      !< Reduced Gaussian grid mask
-   real(kind_real),allocatable :: area(:)             !< Domain area
-   logical :: regional                     !< LAM (if .true.) or global
+   real(kind_real),allocatable :: area(:)  !< Domain area
 
    ! Vector coordinates
    real(kind_real),allocatable :: lon(:)              !< Cells longitude

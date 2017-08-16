@@ -31,16 +31,14 @@ contains
 ! Subroutine: model_oops_coord
 !> Purpose: load OOPS coordinates
 !----------------------------------------------------------------------
-subroutine model_oops_coord(dims,lats,lons,levs,area,mask,ndata)
+subroutine model_oops_coord(lats,lons,levs,mask,ndata)
 
 implicit none
 
 ! Passed variables
-integer,intent(in) :: dims(:)
 real(kind_real),intent(in) :: lats(:)
 real(kind_real),intent(in) :: lons(:)
 real(kind_real),intent(in) :: levs(:)
-real(kind_real),intent(in) :: area(:)
 integer,intent(in) :: mask(:)
 type(ndatatype),intent(inout) :: ndata !< Sampling data
 
@@ -53,11 +51,6 @@ ndata%nl0 = nam%nl
 ! Number of nodes
 ndata%nc0 = size(lats)
 ndata%nlev = size(levs)
-if (ndata%nc0/=product(dims)) call msgerror ('product(dims) should be equal to nc0')
-
-! Normalized area
-allocate(ndata%area(ndata%nl0))
-ndata%area = area(nam%levs)
 
 ! Pack
 call ndata_alloc(ndata)

@@ -31,12 +31,6 @@ QgGeometry::~QgGeometry() {
   qg_geo_delete_f90(keyGeom_);
 }
 // -----------------------------------------------------------------------------
-std::vector<int> QgGeometry::getDims() const {
-  std::vector<int> dims(2);
-  qg_geo_info_f90(keyGeom_, dims[0], dims[1]);
-  return dims;
-}
-// -----------------------------------------------------------------------------
 std::vector<double> QgGeometry::getLats() const {
   int nx;
   int ny;
@@ -76,19 +70,7 @@ std::vector<double> QgGeometry::getLevs() const {
   levs[1] = 1.0;
   return levs;
 }
-// -----------------------------------------------------------------------------
-std::vector<double> QgGeometry::getArea() const {
-  int nx;
-  int ny;
-  qg_geo_info_f90(keyGeom_, nx, ny);
-  const double dytot = 360.0 * double(ny) / double (nx);
-  std::vector<double> area(2);
-  const double a = 4.0 * M_PI * sin (0.5 * dytot * M_PI / 180.0); // Domain between min and max latitudes
-  area[0] = a;
-  area[1] = a;
-  return area;
-}
-// -----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 std::vector<int> QgGeometry::getMask(const int &) const {
   int nx;
   int ny;

@@ -183,6 +183,7 @@ oops/generic/nicas/module_parameters.f90
 oops/generic/nicas/module_parameters_interp.f90
 oops/generic/nicas/module_test.f90
 oops/generic/nicas/tools_const.f90
+oops/generic/nicas/tools_dirac.f90
 oops/generic/nicas/tools_display.f90
 oops/generic/nicas/tools_kinds.f90
 oops/generic/nicas/tools_missing.f90
@@ -236,6 +237,7 @@ oops/interface/State.h
 oops/interface/Variables.h
 
 oops/runs/Application.h
+oops/runs/Dirac.h
 oops/runs/EnsForecasts.h
 oops/runs/ExternalDFI.h
 oops/runs/Forecast.h
