@@ -101,6 +101,11 @@ void QgFields::zero(const util::DateTime & time) {
   time_ = time;
 }
 // -----------------------------------------------------------------------------
+void QgFields::dirac(const eckit::Configuration & config) {
+  const eckit::Configuration * conf = &config;
+  qg_field_dirac_f90(keyFlds_, &conf);
+}
+// -----------------------------------------------------------------------------
 void QgFields::axpy(const double & zz, const QgFields & rhs) {
   qg_field_axpy_f90(keyFlds_, zz, rhs.keyFlds_);
 }

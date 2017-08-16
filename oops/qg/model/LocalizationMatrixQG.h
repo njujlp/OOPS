@@ -25,8 +25,8 @@
 
 // Forward declarations
 namespace qg {
-  class QgGeometry;
   class QgIncrement;
+  class QgState;
 
 /// Localization matrix for QG model.
 
@@ -36,7 +36,7 @@ class LocalizationMatrixQG: public oops::LocalizationBase<QgTraits>,
  public:
   static const std::string classname() {return "qg::LocalizationMatrixQG";}
 
-  LocalizationMatrixQG(const QgGeometry &, const eckit::Configuration &);
+  LocalizationMatrixQG(const QgState &, const eckit::Configuration &);
   ~LocalizationMatrixQG();
   void multiply(QgIncrement &) const;
 
