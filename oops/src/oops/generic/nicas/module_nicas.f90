@@ -17,7 +17,10 @@ use module_parameters, only: compute_parameters
 use module_test, only: test_adjoints,test_pos_def,test_mpi,test_dirac,test_perf
 use tools_const, only: pi
 use type_mpl, only: mpl
-use type_sdata, only: sdatatype,sdata_read_param,sdata_read_local,sdata_read_mpi,sdata_write_param,sdata_write_mpi
+use type_ndata, only: ndatatype,ndataloctype,ndata_dealloc,ndataloc_dealloc,ndataloc_copy, &
+& ndata_read_param,ndata_read_local,ndata_read_mpi, &
+& ndata_write_param,ndata_write_mpi,ndata_write_mpi_summary
+
 implicit none
 
 private
@@ -29,37 +32,32 @@ contains
 ! Subroutine: nicas_driver
 !> Purpose: NICAS driver (separated from main program for OOPS interfacing)
 !----------------------------------------------------------------------
-subroutine nicas_driver(sdata)
+subroutine nicas_driver(ndata,ndataloc)
 
 implicit none
 
 ! Passed variables
-type(sdatatype),intent(inout) :: sdata !< Sampling data
+type(ndatatype),intent(inout) :: ndata             !< Sampling data
+type(ndataloctype),intent(inout) :: ndataloc !< Sampling data,local
 
 ! Local variables
-integer :: il0
+integer :: il0,iproc
 logical :: same_mask
-
-! Determine whether the model is regional
-sdata%regional = all(sdata%area<4.0*pi)
+type(ndataloctype),allocatable :: ndataloc_arr(:)
 
 ! Check whether the mask is the same for all levels
 same_mask = .true.
-do il0=2,sdata%nl0
-   same_mask = same_mask.and.(all((sdata%mask(:,il0).and.sdata%mask(:,1)).or.(.not.sdata%mask(:,il0).and..not.sdata%mask(:,1))))
+do il0=2,ndata%nl0
+   same_mask = same_mask.and.(all((ndata%mask(:,il0).and.ndata%mask(:,1)).or.(.not.ndata%mask(:,il0).and..not.ndata%mask(:,1))))
 end do
 
 ! Define number of independent levels
 if (same_mask) then
-   sdata%nl0i = 1
+   ndata%nl0i = 1
 else
-   sdata%nl0i = sdata%nl0
+   ndata%nl0i = ndata%nl0
 end if
-write(mpl%unit,'(a7,a,i3)') '','Number of independent levels: ',sdata%nl0i
-
-! Initialize sdata parameters from namelist
-sdata%nproc = max(nam%nproc,1)
-sdata%mpicom = nam%mpicom 
+write(mpl%unit,'(a7,a,i3)') '','Number of independent levels: ',ndata%nl0i
 
 if (nam%new_param) then
    !----------------------------------------------------------------------
@@ -69,7 +67,7 @@ if (nam%new_param) then
    write(mpl%unit,'(a)') '-------------------------------------------------------------------'
    write(mpl%unit,'(a)') '--- Compute NICAS parameters'
 
-   call compute_parameters(sdata)
+   call compute_parameters(ndata)
 
    !----------------------------------------------------------------------
    ! Compute NICAS normalization
@@ -78,16 +76,18 @@ if (nam%new_param) then
    write(mpl%unit,'(a)') '-------------------------------------------------------------------'
    write(mpl%unit,'(a)') '--- Compute NICAS normalization'
 
-   call compute_normalization(sdata)
+   call compute_normalization(ndata)
 
-   !----------------------------------------------------------------------
-   ! Write NICAS parameters
-   !----------------------------------------------------------------------
+   if (mpl%main) then
+      !----------------------------------------------------------------------
+      ! Write NICAS parameters
+      !----------------------------------------------------------------------
 
-   write(mpl%unit,'(a)') '-------------------------------------------------------------------'
-   write(mpl%unit,'(a)') '--- Write NICAS parameters'
+      write(mpl%unit,'(a)') '-------------------------------------------------------------------'
+      write(mpl%unit,'(a)') '--- Write NICAS parameters'
 
-   call sdata_write_param(sdata)
+      call ndata_write_param(ndata)
+   end if
 else
    !----------------------------------------------------------------------
    ! Read NICAS parameters
@@ -96,18 +96,23 @@ else
    write(mpl%unit,'(a)') '-------------------------------------------------------------------'
    write(mpl%unit,'(a)') '--- Read NICAS parameters'
 
-   call sdata_read_param(sdata)
+   call ndata_read_param(ndata)
 end if
+call flush(mpl%unit)
+
+!----------------------------------------------------------------------
+! Read NICAS local distribution
+!----------------------------------------------------------------------
+
+write(mpl%unit,'(a)') '-------------------------------------------------------------------'
+write(mpl%unit,'(a)') '--- Read NICAS local distribution'
+
+call ndata_read_local(ndata)
+call flush(mpl%unit)
 
 if (nam%new_mpi) then
-   !----------------------------------------------------------------------
-   ! Read NICAS local distribution
-   !----------------------------------------------------------------------
-
-   write(mpl%unit,'(a)') '-------------------------------------------------------------------'
-   write(mpl%unit,'(a)') '--- Read NICAS local distribution'
-
-   call sdata_read_local(sdata)
+   ! Allocation
+   allocate(ndataloc_arr(nam%nproc))
 
    !----------------------------------------------------------------------
    ! Compute NICAS MPI distribution
@@ -116,27 +121,39 @@ if (nam%new_mpi) then
    write(mpl%unit,'(a)') '-------------------------------------------------------------------'
    write(mpl%unit,'(a)') '--- Compute NICAS MPI distribution'
 
-   sdata%mpicom = nam%mpicom
-   call compute_mpi(sdata)
+   call compute_mpi(ndata,ndataloc_arr)
 
-   !----------------------------------------------------------------------
-   ! Write NICAS MPI distribution
-   !----------------------------------------------------------------------
+   if (mpl%main) then
+      !----------------------------------------------------------------------
+      ! Write NICAS MPI distribution
+      !----------------------------------------------------------------------
 
-   write(mpl%unit,'(a)') '-------------------------------------------------------------------'
-   write(mpl%unit,'(a)') '--- Write NICAS MPI distribution'
+      write(mpl%unit,'(a)') '-------------------------------------------------------------------'
+      write(mpl%unit,'(a)') '--- Write NICAS MPI distribution'
 
-   call sdata_write_mpi(sdata)
+      call ndata_write_mpi(ndataloc_arr)
+
+      !----------------------------------------------------------------------
+      ! Write NICAS MPI summary
+      !----------------------------------------------------------------------
+  
+      write(mpl%unit,'(a)') '-------------------------------------------------------------------'
+      write(mpl%unit,'(a)') '--- Write NICAS MPI summary'
+
+      call ndata_write_mpi_summary(ndata,ndataloc_arr)
+   end if
+
+   do iproc=1,nam%nproc
+      ! Copy ndataloc for the concerned processor
+      if (iproc==mpl%myproc) call ndataloc_copy(ndataloc_arr(iproc),ndataloc)
+
+      ! Release memory
+      call ndataloc_dealloc(ndataloc_arr(iproc))     
+   end do
+
+   ! Release memory
+   deallocate(ndataloc_arr)
 else
-   !----------------------------------------------------------------------
-   ! Read NICAS local distribution
-   !----------------------------------------------------------------------
-
-   write(mpl%unit,'(a)') '-------------------------------------------------------------------'
-   write(mpl%unit,'(a)') '--- Read NICAS local distribution'
-
-   call sdata_read_local(sdata)
-
    !----------------------------------------------------------------------
    ! Read NICAS MPI distribution
    !----------------------------------------------------------------------
@@ -144,8 +161,9 @@ else
    write(mpl%unit,'(a)') '-------------------------------------------------------------------'
    write(mpl%unit,'(a)') '--- Read NICAS MPI distribution'
 
-   call sdata_read_mpi(sdata)
+   call ndata_read_mpi(ndataloc)
 end if
+call flush(mpl%unit)
 
 if (nam%check_adjoints) then
    !----------------------------------------------------------------------
@@ -155,8 +173,9 @@ if (nam%check_adjoints) then
    write(mpl%unit,'(a)') '-------------------------------------------------------------------'
    write(mpl%unit,'(a)') '--- Test adjoints'
 
-   call test_adjoints(sdata)
+   if (mpl%main) call test_adjoints(ndata)
 end if
+call flush(mpl%unit)
 
 if (nam%check_pos_def) then
    !----------------------------------------------------------------------
@@ -166,8 +185,9 @@ if (nam%check_pos_def) then
    write(mpl%unit,'(a)') '-------------------------------------------------------------------'
    write(mpl%unit,'(a)') '--- Test NICAS positive definiteness'
 
-   call test_pos_def(sdata)
+   if (mpl%main) call test_pos_def(ndata)
 end if
+call flush(mpl%unit)
 
 if (nam%check_mpi.and.(nam%nproc>0)) then
    !----------------------------------------------------------------------
@@ -177,8 +197,9 @@ if (nam%check_mpi.and.(nam%nproc>0)) then
    write(mpl%unit,'(a)') '-------------------------------------------------------------------'
    write(mpl%unit,'(a)') '--- Test single/multi-procs equivalence'
 
-  call test_mpi(sdata)
+  call test_mpi(ndata,ndataloc)
 end if
+call flush(mpl%unit)
 
 if (nam%check_dirac) then
    !----------------------------------------------------------------------
@@ -188,10 +209,11 @@ if (nam%check_dirac) then
    write(mpl%unit,'(a)') '-------------------------------------------------------------------'
    write(mpl%unit,'(a)') '--- Apply NICAS to diracs'
 
-   call test_dirac(sdata)
+   call test_dirac(ndata,ndataloc)
 end if
+call flush(mpl%unit)
 
-if (.true.) then
+if (nam%check_perf) then
    !----------------------------------------------------------------------
    ! Test NICAS performance
    !----------------------------------------------------------------------
@@ -199,8 +221,9 @@ if (.true.) then
    write(mpl%unit,'(a)') '-------------------------------------------------------------------'
    write(mpl%unit,'(a)') '--- Test NICAS performance'
 
-   call test_perf(sdata)
+   call test_perf(ndataloc)
 end if
+call flush(mpl%unit)
 
 end subroutine nicas_driver
 

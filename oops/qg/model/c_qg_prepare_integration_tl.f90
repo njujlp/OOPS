@@ -29,9 +29,9 @@ call qg_field_registry%get(c_key_incr, flds)
 
 ! -- calculate potential vorticity and wind components
 
-call calc_pv_tl(flds%q,flds%x,flds%nx,flds%ny, &
+call calc_pv_tl(flds%q,flds%x,flds%geom%nx,flds%geom%ny, &
               & conf%f1,conf%f2,conf%deltax,conf%deltay)
-call zonal_wind_tl(flds%u,flds%x,flds%nx,flds%ny,conf%deltay)
-call meridional_wind_tl(flds%v,flds%x,flds%nx,flds%ny, conf%deltax)
+call zonal_wind_tl(flds%u,flds%x,flds%geom%nx,flds%geom%ny,conf%deltay)
+call meridional_wind_tl(flds%v,flds%x,flds%geom%nx,flds%geom%ny, conf%deltax)
 
 end subroutine c_qg_prepare_integration_tl

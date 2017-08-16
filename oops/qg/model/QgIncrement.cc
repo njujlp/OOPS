@@ -127,6 +127,10 @@ void QgIncrement::zero(const util::DateTime & vt) {
   fields_->zero(vt);
 }
 // -----------------------------------------------------------------------------
+void QgIncrement::dirac(const eckit::Configuration & config) {
+  fields_->dirac(config);
+}
+// -----------------------------------------------------------------------------
 void QgIncrement::axpy(const double & zz, const QgIncrement & dx,
                        const bool check) {
   ASSERT(!check || this->validTime() == dx.validTime());

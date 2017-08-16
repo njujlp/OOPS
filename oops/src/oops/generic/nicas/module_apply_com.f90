@@ -11,13 +11,16 @@
 module module_apply_com
 
 use tools_display, only: msgerror
-use type_fields, only: fldtype,alphatype,buftype
-use type_sdata, only: sdatatype,sdatampitype
+use tools_kinds, only: kind_real
+use type_mpl, only: mpl,mpl_send,mpl_recv,mpl_alltoallv
+use type_ndata, only: ndatatype,ndataloctype
+
 implicit none
 
 private
 public :: fld_com_gl,fld_com_lg
-public :: alpha_com_AB,alpha_com_BA,alpha_com_CA,alpha_copy_AB,alpha_copy_AC,alpha_copy_BC
+public :: alpha_com_AB,alpha_com_BA,alpha_com_AC,alpha_com_CA
+public :: alpha_copy_AB,alpha_copy_AC,alpha_copy_BC
 
 contains
 
@@ -25,29 +28,63 @@ contains
 ! Subroutine: fld_com_gl
 !> Purpose: communicate full field from global to local distribution
 !----------------------------------------------------------------------
-subroutine fld_com_gl(sdata,fld_global,fld_local)
+subroutine fld_com_gl(ndata,ndataloc,fld)
 
 implicit none
 
 ! Passed variables
-type(sdatatype),intent(in) :: sdata                   !< Sampling data
-type(fldtype),intent(inout) :: fld_global             !< Global field
-type(fldtype),intent(inout) :: fld_local(sdata%nproc) !< Local field
+type(ndatatype),intent(in) :: ndata       !< Sampling data
+type(ndataloctype),intent(in) :: ndataloc !< Sampling data, local
+real(kind_real),allocatable,intent(inout) :: fld(:,:)        !< Field
 
 ! Local variables
-integer :: ic0,iproc,ic0a
+integer :: ic0,ic0a,iproc
+real(kind_real),allocatable :: sbuf(:,:)
+real(kind_real) :: rbuf(ndataloc%nc0a*ndata%nl0),fld_tmp(ndataloc%nc0a,ndataloc%nl0)
 
-! Allocation
-do iproc=1,sdata%nproc
-   if (.not.allocated(fld_local(iproc)%vala)) allocate(fld_local(iproc)%vala(sdata%mpi(iproc)%nc0a,sdata%mpi(iproc)%nl0))
+if (mpl%main) then
+   ! Allocation
+   allocate(sbuf(ndata%nc0amax*ndata%nl0,mpl%nproc))
+
+   ! Prepare buffer
+   do ic0=1,ndata%nc0
+      iproc = ndata%ic0_to_iproc(ic0)
+      ic0a = ndata%ic0_to_ic0a(ic0)
+      sbuf((ic0a-1)*ndata%nl0+1:ic0a*ndata%nl0,iproc) = fld(ic0,:)
+   end do
+end if
+
+! Communication
+if (mpl%main) then
+   do iproc=1,mpl%nproc
+      if (iproc==mpl%ioproc) then
+         ! Copy data
+         rbuf = sbuf(1:ndataloc%nc0a*ndata%nl0,iproc)
+      else
+         ! Send data to iproc
+         call mpl_send(ndataloc%nc0a*ndata%nl0,sbuf(1:ndataloc%nc0a*ndata%nl0,iproc),iproc,mpl%tag)
+      end if
+   end do
+else
+   ! Receive data from ioproc
+   call mpl_recv(ndataloc%nc0a*ndata%nl0,rbuf,mpl%ioproc,mpl%tag)
+end if
+mpl%tag = mpl%tag+1
+
+! Copy from buffer
+do ic0a=1,ndataloc%nc0a
+   fld_tmp(ic0a,:) = rbuf((ic0a-1)*ndata%nl0+1:ic0a*ndata%nl0)
 end do
 
-! Loop over cells
-do ic0=1,sdata%nc0
-   iproc = sdata%ic0_to_iproc(ic0)
-   ic0a = sdata%ic0_to_ic0a(ic0)
-   fld_local(iproc)%vala(ic0a,:) = fld_global%val(ic0,:)
-end do
+! Rellocation
+if (allocated(fld)) deallocate(fld)
+allocate(fld(ndataloc%nc0a,ndataloc%nl0))
+
+! Copy
+fld = fld_tmp
+
+! Release memory
+if (mpl%main) deallocate(sbuf)
 
 end subroutine fld_com_gl
 
@@ -55,27 +92,61 @@ end subroutine fld_com_gl
 ! Subroutine: fld_com_lg
 !> Purpose: communicate full field from local to global distribution
 !----------------------------------------------------------------------
-subroutine fld_com_lg(sdata,fld_local,fld_global)
+subroutine fld_com_lg(ndata,ndataloc,fld)
 
 implicit none
 
 ! Passed variables
-type(sdatatype),intent(in) :: sdata                   !< Sampling data
-type(fldtype),intent(inout) :: fld_local(sdata%nproc) !< Local field
-type(fldtype),intent(inout) :: fld_global             !< Global field
+type(ndatatype),intent(in) :: ndata       !< Sampling data
+type(ndataloctype),intent(in) :: ndataloc !< Sampling data, local
+real(kind_real),allocatable,intent(inout) :: fld(:,:)        !< Field
 
 ! Local variables
-integer :: ic0,iproc,ic0a
+integer :: ic0,ic0a,iproc
+real(kind_real),allocatable :: rbuf(:,:)
+real(kind_real) :: sbuf(ndataloc%nc0a*ndata%nl0)
 
-! Allocation
-if (.not.allocated(fld_global%val)) allocate(fld_global%val(sdata%nc0,sdata%nl0))
-
-! Loop over cells
-do ic0=1,sdata%nc0
-   iproc = sdata%ic0_to_iproc(ic0)
-   ic0a = sdata%ic0_to_ic0a(ic0)
-   fld_global%val(ic0,:) = fld_local(iproc)%vala(ic0a,:)
+! Prepare buffer
+do ic0a=1,ndataloc%nc0a
+   sbuf((ic0a-1)*ndata%nl0+1:ic0a*ndata%nl0) = fld(ic0a,:)
 end do
+
+! Communication
+if (mpl%main) then
+   ! Allocation
+   allocate(rbuf(ndata%nc0amax*ndata%nl0,mpl%nproc))
+
+   do iproc=1,mpl%nproc
+      if (iproc==mpl%ioproc) then
+         ! Copy data
+         rbuf(1:ndataloc%nc0a*ndata%nl0,iproc) = sbuf
+      else
+         ! Receive data from iproc
+         call mpl_recv(ndataloc%nc0a*ndata%nl0,rbuf(1:ndataloc%nc0a*ndata%nl0,iproc),iproc,mpl%tag)
+      end if
+   end do
+
+   ! Reallocation
+   deallocate(fld)
+   allocate(fld(ndata%nc0,ndata%nl0))
+
+   ! Copy from buffer
+   do ic0=1,ndata%nc0
+      iproc = ndata%ic0_to_iproc(ic0)
+      ic0a = ndata%ic0_to_ic0a(ic0)
+      fld(ic0,:) = rbuf((ic0a-1)*ndata%nl0+1:ic0a*ndata%nl0,iproc)
+   end do
+
+   ! Release memory
+   deallocate(rbuf)
+else
+   ! Sending data to iproc
+   call mpl_send(ndataloc%nc0a*ndata%nl0,sbuf,mpl%ioproc,mpl%tag)
+
+   ! Release memory
+   deallocate(fld)
+end if
+mpl%tag = mpl%tag+1
 
 end subroutine fld_com_lg
 
@@ -83,64 +154,36 @@ end subroutine fld_com_lg
 ! Subroutine: alpha_com_AB
 !> Purpose: communicate reduced field from zone A to zone B
 !----------------------------------------------------------------------
-subroutine alpha_com_AB(sdata,alpha)
+subroutine alpha_com_AB(ndataloc,alpha)
 
 implicit none
 
 ! Passed variables
-type(sdatatype),intent(in) :: sdata                 !< Sampling data
-type(alphatype),intent(inout) :: alpha(sdata%nproc) !< Subgrid variable
+type(ndataloctype),intent(in) :: ndataloc !< Sampling data
+real(kind_real),allocatable,intent(inout) :: alpha(:)    !< Subgrid variable
 
 ! Local variables
-integer :: iproc,jproc,ir_s,ir_e,is_s,is_e
-type(buftype) :: bufs(sdata%nproc),bufr(sdata%nproc)
+real(kind_real) :: sbuf(ndataloc%AB%nexcl),rbuf(ndataloc%AB%nhalo),alpha_tmp(ndataloc%nsa)
 
-! Allocation
-do iproc=1,sdata%nproc
-   allocate(alpha(iproc)%valb(sdata%mpi(iproc)%nsb))
-end do
+! Prepare buffers to send
+sbuf = alpha(ndataloc%AB%excl)
 
-if (sdata%nproc==1) then
-   ! Copy data
-   alpha(1)%valb = alpha(1)%vala
-elseif (sdata%nproc>1) then
-   ! Allocation
-   do iproc=1,sdata%nproc
-      allocate(bufs(iproc)%val(sdata%mpi(iproc)%AB%nexcl))
-      allocate(bufr(iproc)%val(sdata%mpi(iproc)%AB%nhalo))
-   end do
+! Communication
+call mpl_alltoallv(ndataloc%AB%nexcl,sbuf,ndataloc%AB%jexclcounts,ndataloc%AB%jexcldispl, &
+ & ndataloc%AB%nhalo,rbuf,ndataloc%AB%jhalocounts,ndataloc%AB%jhalodispl)
 
-   ! Prepare buffers to send
-   do iproc=1,sdata%nproc
-      bufs(iproc)%val = alpha(iproc)%vala(sdata%mpi(iproc)%AB%excl)
-   end do
+! Copy
+alpha_tmp = alpha
 
-   ! Emulate mpi_alltoallv
-   do iproc=1,sdata%nproc
-      do jproc=1,sdata%nproc
-         ! Communication iproc->jproc
-         is_s = sdata%mpi(iproc)%AB%jexcldispl(jproc)+1
-         is_e = sdata%mpi(iproc)%AB%jexcldispl(jproc)+sdata%mpi(iproc)%AB%jexclcounts(jproc)
-         ir_s = sdata%mpi(jproc)%AB%jhalodispl(iproc)+1
-         ir_e = sdata%mpi(jproc)%AB%jhalodispl(iproc)+sdata%mpi(jproc)%AB%jhalocounts(iproc)
-         if (is_e-is_s/=ir_e-ir_s) call msgerror('wrong mpi_alltoallv indices')
-         if (ir_e>=ir_s) bufr(jproc)%val(ir_s:ir_e) = bufs(iproc)%val(is_s:is_e)
-      end do
-   end do
+! Reallocation
+deallocate(alpha)
+allocate(alpha(ndataloc%nsb))
 
-   do iproc=1,sdata%nproc
-      ! Copy zone A into zone B
-      alpha(iproc)%valb(sdata%mpi(iproc)%isa_to_isb) = alpha(iproc)%vala
+! Copy zone A into zone B
+alpha(ndataloc%isa_to_isb) = alpha_tmp
 
-      ! Copy halo into zone B
-      alpha(iproc)%valb(sdata%mpi(iproc)%AB%halo) = bufr(iproc)%val
-   end do
-end if
-
-! Release memory
-do iproc=1,sdata%nproc
-   deallocate(alpha(iproc)%vala)
-end do
+! Copy halo into zone B
+alpha(ndataloc%AB%halo) = rbuf
 
 end subroutine alpha_com_AB
 
@@ -148,133 +191,110 @@ end subroutine alpha_com_AB
 ! Subroutine: alpha_com_BA
 !> Purpose: communicate reduced field from zone B to zone A
 !----------------------------------------------------------------------
-subroutine alpha_com_BA(sdata,alpha)
+subroutine alpha_com_BA(ndataloc,alpha)
 
 implicit none
 
 ! Passed variables
-type(sdatatype),intent(in) :: sdata                 !< Sampling data
-type(alphatype),intent(inout) :: alpha(sdata%nproc) !< Subgrid variable
+type(ndataloctype),intent(in) :: ndataloc !< Sampling data
+real(kind_real),allocatable,intent(inout) :: alpha(:)    !< Subgrid variable
 
 ! Local variables
-integer :: iproc,jproc,ir_s,ir_e,is_s,is_e,i
-type(buftype) :: bufs(sdata%nproc),bufr(sdata%nproc)
+real(kind_real) :: sbuf(ndataloc%AB%nhalo),rbuf(ndataloc%AB%nexcl),alpha_tmp(ndataloc%nsb)
 
-! Allocation
-do iproc=1,sdata%nproc
-   allocate(alpha(iproc)%vala(sdata%mpi(iproc)%nsa))
-end do
+! Prepare buffers to send
+sbuf = alpha(ndataloc%AB%halo)
 
-if (sdata%nproc==1) then
-   ! Copy data
-   alpha(1)%vala = alpha(1)%valb
-elseif (sdata%nproc>1) then
-   ! Allocation
-   do iproc=1,sdata%nproc
-      allocate(bufs(iproc)%val(sdata%mpi(iproc)%AB%nhalo))
-      allocate(bufr(iproc)%val(sdata%mpi(iproc)%AB%nexcl))
-   end do
+! Communication
+call mpl_alltoallv(ndataloc%AB%nhalo,sbuf,ndataloc%AB%jhalocounts,ndataloc%AB%jhalodispl, &
+ & ndataloc%AB%nexcl,rbuf,ndataloc%AB%jexclcounts,ndataloc%AB%jexcldispl)
 
-   ! Prepare buffers to send
-   do iproc=1,sdata%nproc
-      bufs(iproc)%val = alpha(iproc)%valb(sdata%mpi(iproc)%AB%halo)
-   end do
+! Copy
+alpha_tmp = alpha
 
-   ! Emulate mpi_alltoallv
-   do iproc=1,sdata%nproc
-      do jproc=1,sdata%nproc
-         ! Communication iproc->jproc
-         is_s = sdata%mpi(iproc)%AB%jhalodispl(jproc)+1
-         is_e = sdata%mpi(iproc)%AB%jhalodispl(jproc)+sdata%mpi(iproc)%AB%jhalocounts(jproc)
-         ir_s = sdata%mpi(jproc)%AB%jexcldispl(iproc)+1
-         ir_e = sdata%mpi(jproc)%AB%jexcldispl(iproc)+sdata%mpi(jproc)%AB%jexclcounts(iproc)
-         if (is_e-is_s/=ir_e-ir_s) call msgerror('wrong mpi_alltoallv indices')
-         if (ir_e>=ir_s) bufr(jproc)%val(ir_s:ir_e) = bufs(iproc)%val(is_s:is_e)
-      end do
-   end do
+! Reallocation
+deallocate(alpha)
+allocate(alpha(ndataloc%nsa))
 
-   do iproc=1,sdata%nproc
-      ! Copy zone B into zone A
-      alpha(iproc)%vala = alpha(iproc)%valb(sdata%mpi(iproc)%isa_to_isb)
+! Copy zone B into zone A
+alpha = alpha_tmp(ndataloc%isa_to_isb)
 
-      ! Copy halo into zone B
-      do i=1,sdata%mpi(iproc)%AB%nexcl
-         alpha(iproc)%vala(sdata%mpi(iproc)%AB%excl(i)) = alpha(iproc)%vala(sdata%mpi(iproc)%AB%excl(i))+bufr(iproc)%val(i)
-      end do
-   end do
-end if
-
-! Release memory
-do iproc=1,sdata%nproc
-   deallocate(alpha(iproc)%valb)
-end do
+! Copy halo into zone B
+alpha(ndataloc%AB%excl) = alpha(ndataloc%AB%excl)+rbuf
 
 end subroutine alpha_com_BA
+
+!----------------------------------------------------------------------
+! Subroutine: alpha_com_AC
+!> Purpose: communicate reduced field from zone A to zone C
+!----------------------------------------------------------------------
+subroutine alpha_com_AC(ndataloc,alpha)
+
+implicit none
+
+! Passed variables
+type(ndataloctype),intent(in) :: ndataloc !< Sampling data
+real(kind_real),allocatable,intent(inout) :: alpha(:)    !< Subgrid variable
+
+! Local variables
+real(kind_real) :: sbuf(ndataloc%AC%nexcl),rbuf(ndataloc%AC%nhalo),alpha_tmp(ndataloc%nsa)
+
+! Prepare buffers to send
+sbuf = alpha(ndataloc%AC%excl)
+
+! Communication
+call mpl_alltoallv(ndataloc%AC%nexcl,sbuf,ndataloc%AC%jexclcounts,ndataloc%AC%jexcldispl, &
+ & ndataloc%AC%nhalo,rbuf,ndataloc%AC%jhalocounts,ndataloc%AC%jhalodispl)
+
+! Copy
+alpha_tmp = alpha
+
+! Reallocation
+deallocate(alpha)
+allocate(alpha(ndataloc%nsc))
+
+! Copy zone A into zone B
+alpha(ndataloc%isa_to_isc) = alpha_tmp
+
+! Copy halo into zone B
+alpha(ndataloc%AC%halo) = rbuf
+
+end subroutine alpha_com_AC
 
 !----------------------------------------------------------------------
 ! Subroutine: alpha_com_CA
 !> Purpose: communicate reduced field from zone C to zone A
 !----------------------------------------------------------------------
-subroutine alpha_com_CA(sdata,alpha)
+subroutine alpha_com_CA(ndataloc,alpha)
 
 implicit none
 
 ! Passed variables
-type(sdatatype),intent(in) :: sdata                 !< Sampling data
-type(alphatype),intent(inout) :: alpha(sdata%nproc) !< Subgrid variable
+type(ndataloctype),intent(in) :: ndataloc !< Sampling data
+real(kind_real),allocatable,intent(inout) :: alpha(:)    !< Subgrid variable
 
 ! Local variables
-integer :: iproc,jproc,ir_s,ir_e,is_s,is_e,i
-type(buftype) :: bufs(sdata%nproc),bufr(sdata%nproc)
+real(kind_real) :: sbuf(ndataloc%AC%nhalo),rbuf(ndataloc%AC%nexcl),alpha_tmp(ndataloc%nsc)
 
-! Allocation
-do iproc=1,sdata%nproc
-   allocate(alpha(iproc)%vala(sdata%mpi(iproc)%nsa))
-end do
+! Prepare buffers to send
+sbuf = alpha(ndataloc%AC%halo)
 
-if (sdata%nproc==1) then
-   ! Copy data
-   alpha(1)%vala = alpha(1)%valc
-elseif (sdata%nproc>1) then
-   ! Allocation
-   do iproc=1,sdata%nproc
-      allocate(bufs(iproc)%val(sdata%mpi(iproc)%AC%nhalo))
-      allocate(bufr(iproc)%val(sdata%mpi(iproc)%AC%nexcl))
-   end do
+! Communication
+call mpl_alltoallv(ndataloc%AC%nhalo,sbuf,ndataloc%AC%jhalocounts,ndataloc%AC%jhalodispl, &
+ & ndataloc%AC%nexcl,rbuf,ndataloc%AC%jexclcounts,ndataloc%AC%jexcldispl)
 
-   ! Prepare buffers to send
-   do iproc=1,sdata%nproc
-      bufs(iproc)%val = alpha(iproc)%valc(sdata%mpi(iproc)%AC%halo)
-   end do
+! Copy
+alpha_tmp = alpha
 
-   ! Emulate mpi_alltoallv
-   do iproc=1,sdata%nproc
-      do jproc=1,sdata%nproc
-         ! Communication iproc->jproc
-         is_s = sdata%mpi(iproc)%AC%jhalodispl(jproc)+1
-         is_e = sdata%mpi(iproc)%AC%jhalodispl(jproc)+sdata%mpi(iproc)%AC%jhalocounts(jproc)
-         ir_s = sdata%mpi(jproc)%AC%jexcldispl(iproc)+1
-         ir_e = sdata%mpi(jproc)%AC%jexcldispl(iproc)+sdata%mpi(jproc)%AC%jexclcounts(iproc)
-         if (is_e-is_s/=ir_e-ir_s) call msgerror('wrong mpi_alltoallv indices')
-         if (ir_e>=ir_s) bufr(jproc)%val(ir_s:ir_e) = bufs(iproc)%val(is_s:is_e)
-      end do
-   end do
+! Reallocation
+deallocate(alpha)
+allocate(alpha(ndataloc%nsa))
 
-   do iproc=1,sdata%nproc
-      ! Copy zone C into zone A
-      alpha(iproc)%vala = alpha(iproc)%valc(sdata%mpi(iproc)%isa_to_isc)
+! Copy zone C into zone A
+alpha = alpha_tmp(ndataloc%isa_to_isc)
 
-      ! Copy halo into zone C
-      do i=1,sdata%mpi(iproc)%AC%nexcl
-         alpha(iproc)%vala(sdata%mpi(iproc)%AC%excl(i)) = alpha(iproc)%vala(sdata%mpi(iproc)%AC%excl(i))+bufr(iproc)%val(i)
-      end do
-   end do
-end if
-
-! Release memory
-do iproc=1,sdata%nproc
-   deallocate(alpha(iproc)%valc)
-end do
+! Copy halo into zone C
+alpha(ndataloc%AC%excl) = alpha(ndataloc%AC%excl)+rbuf
 
 end subroutine alpha_com_CA
 
@@ -282,25 +302,29 @@ end subroutine alpha_com_CA
 ! Subroutine: alpha_copy_AB
 !> Purpose: copy reduced field from zone A to zone B
 !----------------------------------------------------------------------
-subroutine alpha_copy_AB(sdatampi,alpha)
+subroutine alpha_copy_AB(ndataloc,alpha)
 
 implicit none
 
 ! Passed variables
-type(sdatampitype),intent(in) :: sdatampi !< Sampling data
-type(alphatype),intent(inout) :: alpha    !< Subgrid variable
+type(ndataloctype),intent(in) :: ndataloc !< Sampling data
+real(kind_real),allocatable,intent(inout) :: alpha(:)    !< Subgrid variable
 
-! Allocation
-allocate(alpha%valb(sdatampi%nsb))
+! Local variable
+real(kind_real) :: alpha_tmp(ndataloc%nsa)
+
+! Copy
+alpha_tmp = alpha
+
+! Reallocation
+deallocate(alpha)
+allocate(alpha(ndataloc%nsb))
 
 ! Initialize
-alpha%valb = 0.0
+alpha = 0.0
 
 ! Copy zone A into zone B
-alpha%valb(sdatampi%isa_to_isb) = alpha%vala
-
-! Release memory
-deallocate(alpha%vala)
+alpha(ndataloc%isa_to_isb) = alpha_tmp
 
 end subroutine alpha_copy_AB
 
@@ -308,25 +332,29 @@ end subroutine alpha_copy_AB
 ! Subroutine: alpha_copy_AC
 !> Purpose: copy reduced field from zone A to zone C
 !----------------------------------------------------------------------
-subroutine alpha_copy_AC(sdatampi,alpha)
+subroutine alpha_copy_AC(ndataloc,alpha)
 
 implicit none
 
 ! Passed variables
-type(sdatampitype),intent(in) :: sdatampi !< Sampling data
-type(alphatype),intent(inout) :: alpha    !< Subgrid variable
+type(ndataloctype),intent(in) :: ndataloc !< Sampling data
+real(kind_real),allocatable,intent(inout) :: alpha(:)    !< Subgrid variable
 
-! Allocation
-allocate(alpha%valc(sdatampi%nsc))
+! Local variable
+real(kind_real) :: alpha_tmp(ndataloc%nsa)
+
+! Copy
+alpha_tmp = alpha
+
+! Reallocation
+deallocate(alpha)
+allocate(alpha(ndataloc%nsc))
 
 ! Initialize
-alpha%valc = 0.0
+alpha = 0.0
 
 ! Copy zone A into zone C
-alpha%valc(sdatampi%isa_to_isc) = alpha%vala
-
-! Release memory
-deallocate(alpha%vala)
+alpha(ndataloc%isa_to_isc) = alpha_tmp
 
 end subroutine alpha_copy_AC
 
@@ -334,25 +362,29 @@ end subroutine alpha_copy_AC
 ! Subroutine: alpha_copy_BC
 !> Purpose: copy reduced field from zone B to zone C
 !----------------------------------------------------------------------
-subroutine alpha_copy_BC(sdatampi,alpha)
+subroutine alpha_copy_BC(ndataloc,alpha)
 
 implicit none
 
 ! Passed variables
-type(sdatampitype),intent(in) :: sdatampi !< Sampling data
-type(alphatype),intent(inout) :: alpha    !< Subgrid variable
+type(ndataloctype),intent(in) :: ndataloc !< Sampling data
+real(kind_real),allocatable,intent(inout) :: alpha(:)    !< Subgrid variable
 
-! Allocation
-allocate(alpha%valc(sdatampi%nsc))
+! Local variable
+real(kind_real) :: alpha_tmp(ndataloc%nsb)
 
-! Initialization
-alpha%valc = 0.0
+! Copy
+alpha_tmp = alpha
 
-! Copy zone B into zone C
-alpha%valc(sdatampi%isb_to_isc) = alpha%valb
+! Reallocation
+deallocate(alpha)
+allocate(alpha(ndataloc%nsc))
 
-! Release memory
-deallocate(alpha%valb)
+! Initialize
+alpha = 0.0
+
+! Copy zone A into zone B
+alpha(ndataloc%isb_to_isc) = alpha_tmp
 
 end subroutine alpha_copy_BC
 

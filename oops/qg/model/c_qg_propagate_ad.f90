@@ -41,37 +41,37 @@ call qg_field_registry%get(c_key_incr,flds)
 call qg_traj_registry%get(c_key_traj,traj)
 
 !--- workspace and trajectory
-allocate(qnew(flds%nx,flds%ny,2))
-allocate(x_traj(flds%nx,flds%ny,2))
-allocate(qn_traj(flds%nx,2))
-allocate(qs_traj(flds%nx,2))
-allocate(q_traj(flds%nx,flds%ny,2))
-allocate(u_traj(flds%nx,flds%ny,2))
-allocate(v_traj(flds%nx,flds%ny,2))
-call get_traj(traj,flds%nx,flds%ny,x_traj,xn_traj,xs_traj,qn_traj,qs_traj)
+allocate(qnew(flds%geom%nx,flds%geom%ny,2))
+allocate(x_traj(flds%geom%nx,flds%geom%ny,2))
+allocate(qn_traj(flds%geom%nx,2))
+allocate(qs_traj(flds%geom%nx,2))
+allocate(q_traj(flds%geom%nx,flds%geom%ny,2))
+allocate(u_traj(flds%geom%nx,flds%geom%ny,2))
+allocate(v_traj(flds%geom%nx,flds%geom%ny,2))
+call get_traj(traj,flds%geom%nx,flds%geom%ny,x_traj,xn_traj,xs_traj,qn_traj,qs_traj)
 
 !--- generate trajectory values for potential vorticity and wind
 
-call calc_pv(flds%nx,flds%ny,q_traj,x_traj,xn_traj,xs_traj, &
+call calc_pv(flds%geom%nx,flds%geom%ny,q_traj,x_traj,xn_traj,xs_traj, &
     &        conf%f1,conf%f2,conf%deltax,conf%deltay,bet,conf%rs)
-call zonal_wind (u_traj,x_traj,xn_traj,xs_traj,flds%nx,flds%ny, conf%deltay)
-call meridional_wind (v_traj,x_traj,flds%nx,flds%ny,conf%deltax)
+call zonal_wind (u_traj,x_traj,xn_traj,xs_traj,flds%geom%nx,flds%geom%ny, conf%deltay)
+call meridional_wind (v_traj,x_traj,flds%geom%nx,flds%geom%ny,conf%deltax)
 
 ! -- calculate potential vorticity and wind components
 
-call meridional_wind_ad(flds%v,flds%x,flds%nx,flds%ny,conf%deltax)
-call zonal_wind_ad(flds%u,flds%x,flds%nx,flds%ny,conf%deltay)
+call meridional_wind_ad(flds%v,flds%x,flds%geom%nx,flds%geom%ny,conf%deltax)
+call zonal_wind_ad(flds%u,flds%x,flds%geom%nx,flds%geom%ny,conf%deltay)
 qnew(:,:,:) = flds%q(:,:,:)
 
 !--- invert the potential vorticity to determine streamfunction
 
-call invert_pv_ad(flds%x,qnew,flds%nx,flds%ny, &
+call invert_pv_ad(flds%x,qnew,flds%geom%nx,flds%geom%ny, &
                 & conf%deltax,conf%deltay,conf%f1,conf%f2)
 
 !--- advect the potential vorticity
 
 call advect_pv_ad(qnew,flds%q,q_traj,qn_traj,qs_traj, &
-    &             flds%u,u_traj,flds%v,v_traj,flds%nx,flds%ny, &
+    &             flds%u,u_traj,flds%v,v_traj,flds%geom%nx,flds%geom%ny, &
     &             conf%deltax,conf%deltay,conf%dt)
 
 !--- clean-up
