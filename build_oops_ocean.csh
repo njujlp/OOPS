@@ -7,11 +7,10 @@ export BUILD=${SRC}/build
 
 export COMMON_LIBS=/home/gvernier/Sandboxes/common_libs/
 
-#export ESMF_PATH=$COMMON_LIBS #/glade/p/work/svasquez/esmf_install/esmf_710bs33_gnu_openmpi_netcdf_O
-#export ESMF_LIBRARIES=${ESMF_PATH}/lib/libesmf.a
-#export ESMF_INCLUDE_DIR=${ESMF_PATH}/mod/modO/Linux.gfortran.64.openmpi.default
-
 export EIGEN3_INCLUDE_DIR=/usr/include/eigen3/
+
+# Need boost library
+export BOOST_ROOT=/home/gvernier/Sandboxes/boost_1_64_0/
 
 export OPENMPI_BINDIR=/home/gvernier/Sandboxes/common_libs/bin
 
@@ -22,8 +21,9 @@ export NETCDF_LIBRARIES="/lib/libnetcdff.a;/lib/libnetcdf.a"
 export PATH=${PATH}:${SRC}/ecbuild/bin:$EIGEN3_INCLUDE_DIR
 
 # configure
-#ecbuild --build=debug -DNETCDF_Fortran=ON -DESMF_LIBRARY=${ESMF_LIBRARIES} -DESMF_INCLUDE_DIR=${ESMF_INCLUDE_DIR} -DCMAKE_CXX_COMPILER=${OPENMPI_BINDIR}/mpicxx -DCMAKE_C_COMPILER=${OPENMPI_BINDIR}/mpicc -DCMAKE_Fortran_COMPILER=${OPENMPI_BINDIR}/mpifort ${SRC}
-ecbuild --build=debug -DNETCDF_Fortran=ON -DCMAKE_CXX_COMPILER=${OPENMPI_BINDIR}/mpicxx -DCMAKE_C_COMPILER=${OPENMPI_BINDIR}/mpicc -DCMAKE_Fortran_COMPILER=${OPENMPI_BINDIR}/mpifort ${SRC}
+ecbuild --build=debug -D_GLIBCXX_USE_CXX11_ABI=0 -DNETCDF_Fortran=ON -DCMAKE_CXX_COMPILER=${OPENMPI_BINDIR}/mpicxx -DCMAKE_C_COMPILER=${OPENMPI_BINDIR}/mpicc -DCMAKE_Fortran_COMPILER=${OPENMPI_BINDIR}/mpifort -DBOOST_ROOT=$BOOST_ROOT -DBoost_NO_SYSTEM_PATHS=ON ${SRC}
+
+
 
 # Compile
 make VERBOSE=1 -j4
