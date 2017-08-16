@@ -32,7 +32,7 @@ call qg_field_registry%get(c_key_state,flds)
 call qg_traj_registry%init()            
 call qg_traj_registry%add(c_key_traj)
 call qg_traj_registry%get(c_key_traj,traj)
-call set_traj(traj,flds%nx,flds%ny, &
+call set_traj(traj,flds%geom%nx,flds%geom%ny, &
             & flds%x,flds%x_north,flds%x_south,flds%q_north,flds%q_south)
 
 ! ------------------------------------------------------------------------------

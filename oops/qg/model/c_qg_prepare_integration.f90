@@ -36,10 +36,10 @@ call qg_config_registry%get(c_key_conf, conf)
 
 ! -- calculate potential vorticity and wind components
 
-call calc_pv(flds%nx,flds%ny,flds%q,flds%x,flds%x_north,flds%x_south, &
+call calc_pv(flds%geom%nx,flds%geom%ny,flds%q,flds%x,flds%x_north,flds%x_south, &
            & conf%f1,conf%f2,conf%deltax,conf%deltay,bet,conf%rs)
-call zonal_wind(flds%u,flds%x,flds%x_north,flds%x_south,flds%nx,flds%ny, &
+call zonal_wind(flds%u,flds%x,flds%x_north,flds%x_south,flds%geom%nx,flds%geom%ny, &
               & conf%deltay)
-call meridional_wind(flds%v,flds%x,flds%nx,flds%ny,conf%deltax)
+call meridional_wind(flds%v,flds%x,flds%geom%nx,flds%geom%ny,conf%deltax)
 
 end subroutine c_qg_prepare_integration
