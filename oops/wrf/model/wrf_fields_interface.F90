@@ -368,7 +368,7 @@ call wrf_field_registry%get(c_key_fld,fld)
 
 nlon  = fld%nx
 nlat  = fld%ny
-nlevs = fld%nl
+nlevs = fld%nz
 nfields = fld%nf
 
 end subroutine wrf_fieldnum_c

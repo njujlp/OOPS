@@ -1,12 +1,17 @@
 
-!> Handle fields for the QG model
+!> Handle fields for the WRF model
 
 module wrf_fields
 
-use config_mod
+use iso_c_binding
 use wrf_geom_mod
 use wrf_vars_mod
+use config_mod
 use kinds
+use tools_nc
+use string_f_c_mod
+use datetime_mod
+use netcdf
 
 implicit none
 private
@@ -25,21 +30,22 @@ public :: wrf_field_registry
 type :: wrf_field
   integer :: nx                     !< Zonal grid dimension
   integer :: ny                     !< Meridional grid dimension
-  integer :: nl                     !< Number of levels
+  integer :: nz                     !< Number of levels
   integer :: nf                     !< Number of fields
-  logical :: lbc                    !< North-South boundary is present
+! logical :: lbc                    !< North-South boundary is present
   real(kind=kind_real), pointer :: gfld3d(:,:,:)    !< 3D fields
-  real(kind=kind_real), pointer :: x(:,:,:)         !< Stream function
-  real(kind=kind_real), pointer :: q(:,:,:)         !< Potential vorticity
-  real(kind=kind_real), pointer :: u(:,:,:)         !< Zonal wind
-  real(kind=kind_real), pointer :: v(:,:,:)         !< Meridional wind
-  real(kind=kind_real), pointer :: xbound(:)        !< Streamfunction on walls
-  real(kind=kind_real), pointer :: x_north(:)       !< Streamfunction on northern wall
-  real(kind=kind_real), pointer :: x_south(:)       !< Streamfunction on southern wall
-  real(kind=kind_real), pointer :: qbound(:,:)      !< PV on walls
-  real(kind=kind_real), pointer :: q_north(:,:)     !< PV on northern wall
-  real(kind=kind_real), pointer :: q_south(:,:)     !< PV on southern wall
-  character(len=1), allocatable :: fldnames(:) !< Variable identifiers
+  real(kind=kind_real), allocatable :: U(:,:,:)         !< x-wind component
+  real(kind=kind_real), allocatable :: V(:,:,:)         !< y-wind component
+  real(kind=kind_real), allocatable :: T(:,:,:)         !< perturbation potential temperature (theta-t0)
+  real(kind=kind_real), allocatable :: Q(:,:,:)    !< water vapor mixing ratio
+  real(kind=kind_real), allocatable :: P(:,:,:)         !< perturbation pressure
+  real(kind=kind_real), allocatable :: H(:,:,:)         !< perturbation pressure
+  character(len=max_string_length), allocatable :: fldnames(:) !< Variable identifiers
+  character(len=max_string_length), allocatable :: filename !< File name
+  real(kind=kind_real), pointer :: qbound(:,:)         !< perturbation pressure
+  real(kind=kind_real), pointer :: xbound(:)         !< perturbation pressure
+  real(kind=kind_real), pointer :: x(:)         !< perturbation pressure
+  logical :: lbc        !< perturbation pressure
 end type wrf_field
 
 #define LISTED_TYPE wrf_field
@@ -63,56 +69,32 @@ implicit none
 type(wrf_field), intent(inout) :: self
 type(wrf_geom),  intent(in)    :: geom
 type(wrf_vars),  intent(in)    :: vars
-integer :: ioff
 
-self%nx = geom%nlon
-self%ny = geom%nlat
-self%nl = geom%nlev
-self%nf = vars%nv
-self%lbc = vars%lbc
+  call check(self)
 
-allocate(self%gfld3d(self%nx,self%ny,self%nl*self%nf))
-self%gfld3d(:,:,:)=0.0_kind_real
+  self%nx = geom%nlon
+  self%ny = geom%nlat
+  self%nz = geom%nlev
+  self%nf = vars%nv
 
-ioff=0
-self%x => self%gfld3d(:,:,ioff+1:ioff+self%nl)
-ioff =ioff + self%nl
+  allocate(self%U(self%nx,self%ny,self%nz))
+  allocate(self%V(self%nx,self%ny,self%nz))
+  allocate(self%T(self%nx,self%ny,self%nz))
+  allocate(self%Q(self%nx,self%ny,self%nz))
+  allocate(self%P(self%nx,self%ny,self%nz))
+  allocate(self%H(self%nx,self%ny,self%nz))
 
-if (self%nf>1) then
-  self%q => self%gfld3d(:,:,ioff+1:ioff+self%nl)
-  ioff =ioff + self%nl
-  self%u => self%gfld3d(:,:,ioff+1:ioff+self%nl)
-  ioff =ioff + self%nl
-  self%v => self%gfld3d(:,:,ioff+1:ioff+self%nl)
-  ioff =ioff + self%nl
-else
-  self%q => null()
-  self%u => null()
-  self%v => null()
-endif
-if (ioff/=self%nf*self%nl)  call abor1_ftn ("wrf_fields:create error number of fields")
+  allocate (self%fldnames(self%nf))
+  self%fldnames = vars%fldnames
 
-allocate(self%fldnames(self%nf))
-self%fldnames(:)=vars%fldnames(:)
+  self%U = 0.0_kind_real
+  self%V = 0.0_kind_real
+  self%T = 0.0_kind_real
+  self%Q = 0.0_kind_real
+  self%P = 0.0_kind_real
+  self%H = 0.0_kind_real
 
-if (self%lbc) then
-  allocate(self%xbound(4))
-  self%x_north => self%xbound(1:2)
-  self%x_south => self%xbound(3:4)
-  allocate(self%qbound(self%nx,4))
-  self%q_north => self%qbound(:,1:2)
-  self%q_south => self%qbound(:,3:4)
-else
-  self%xbound => null()
-  self%x_north => null()
-  self%x_south => null()
-  self%qbound => null()
-  self%q_north => null()
-  self%q_south => null()
-endif
-
-call check(self)
-
+return
 end subroutine create
 
 ! ------------------------------------------------------------------------------
@@ -121,13 +103,17 @@ subroutine delete(self)
 implicit none
 type(wrf_field), intent(inout) :: self
 
-call check(self)
+ call check(self)
 
-if (associated(self%gfld3d)) deallocate(self%gfld3d)
-if (associated(self%xbound)) deallocate(self%xbound)
-if (associated(self%qbound)) deallocate(self%qbound)
-if (allocated(self%fldnames)) deallocate(self%fldnames)
+  if (allocated(self%U)) deallocate(self%U)
+  if (allocated(self%V)) deallocate(self%V)
+  if (allocated(self%T)) deallocate(self%T)
+  if (allocated(self%Q)) deallocate(self%Q)
+  if (allocated(self%P)) deallocate(self%P)
+  if (allocated(self%H)) deallocate(self%H)
+  if (allocated(self%fldnames)) deallocate(self%fldnames)
 
+return
 end subroutine delete
 
 ! ------------------------------------------------------------------------------
@@ -136,14 +122,16 @@ subroutine zeros(self)
 implicit none
 type(wrf_field), intent(inout) :: self
 
-call check(self)
+  call check(self)
 
-self%gfld3d(:,:,:) = 0.0_kind_real
-if (self%lbc) then
-  self%xbound(:)   = 0.0_kind_real
-  self%qbound(:,:) = 0.0_kind_real
-endif
+  self%U = 0.0_kind_real
+  self%V = 0.0_kind_real
+  self%T = 0.0_kind_real
+  self%Q = 0.0_kind_real
+  self%P = 0.0_kind_real
+  self%H = 0.0_kind_real
 
+return
 end subroutine zeros
 
 ! ------------------------------------------------------------------------------
@@ -153,14 +141,16 @@ use random_vectors_mod
 implicit none
 type(wrf_field), intent(inout) :: self
 
-call check(self)
+  call check(self)
 
-call random_vector(self%gfld3d(:,:,:))
-if (self%lbc) then
-  call random_vector(self%xbound(:))
-  call random_vector(self%qbound(:,:))
-endif
+  call random_vector(self%U)
+  call random_vector(self%V)
+  call random_vector(self%T)
+  call random_vector(self%Q)
+  call random_vector(self%P)
+  call random_vector(self%H)
 
+return
 end subroutine random
 
 ! ------------------------------------------------------------------------------
@@ -171,21 +161,14 @@ type(wrf_field), intent(inout) :: self
 type(wrf_field), intent(in)    :: rhs
 integer :: nf
 
-call check_resolution(self, rhs)
+  call check_resolution(self, rhs)
 
-nf = common_vars(self, rhs)
-self%gfld3d(:,:,1:nf) = rhs%gfld3d(:,:,1:nf)
-if (self%nf>nf) self%gfld3d(:,:,nf+1:self%nf) = 0.0_kind_real
-
-if (self%lbc) then
-  if (rhs%lbc) then
-    self%xbound(:) = rhs%xbound(:)
-    self%qbound(:,:) = rhs%qbound(:,:)
-  else
-    self%xbound(:) = 0.0_kind_real
-    self%qbound(:,:) = 0.0_kind_real
-  endif
-endif
+  self%U = rhs%U 
+  self%V = rhs%V
+  self%T = rhs%T
+  self%Q = rhs%Q
+  self%P = rhs%P
+  self%H = rhs%H
 
 return
 end subroutine copy
@@ -198,15 +181,14 @@ type(wrf_field), intent(inout) :: self
 type(wrf_field), intent(in)    :: rhs
 integer :: nf
 
-call check_resolution(self, rhs)
+  call check_resolution(self, rhs)
 
-nf = common_vars(self, rhs)
-self%gfld3d(:,:,1:nf) = self%gfld3d(:,:,1:nf) + rhs%gfld3d(:,:,1:nf)
-
-if (self%lbc .and. rhs%lbc) then
-  self%xbound(:)   = self%xbound(:)   + rhs%xbound(:)
-  self%qbound(:,:) = self%qbound(:,:) + rhs%qbound(:,:)
-endif
+  self%U = self%U + rhs%U
+  self%V = self%V + rhs%V
+  self%T = self%T + rhs%T
+  self%Q = self%Q + rhs%Q
+  self%P = self%P + rhs%P
+  self%H = self%H + rhs%H
 
 return
 end subroutine self_add
@@ -219,15 +201,15 @@ type(wrf_field), intent(inout) :: self
 type(wrf_field), intent(in)    :: rhs
 integer :: nf
 
-call check_resolution(self, rhs)
+  call check_resolution(self, rhs)
 
-nf = common_vars(self, rhs)
-self%gfld3d(:,:,1:nf) = self%gfld3d(:,:,1:nf) * rhs%gfld3d(:,:,1:nf)
-
-if (self%lbc .and. rhs%lbc) then
-  self%xbound(:)   = self%xbound(:)   * rhs%xbound(:)
-  self%qbound(:,:) = self%qbound(:,:) * rhs%qbound(:,:)
-endif
+  self%U=self%U*rhs%U
+  self%V=self%V*rhs%V
+  self%T=self%T*rhs%T
+  self%P=self%P*rhs%P
+  self%Q=self%Q*rhs%Q
+  self%P=self%P*rhs%P
+  self%H=self%H*rhs%H
 
 return
 end subroutine self_schur
@@ -240,15 +222,14 @@ type(wrf_field), intent(inout) :: self
 type(wrf_field), intent(in)    :: rhs
 integer :: nf
 
-call check_resolution(self, rhs)
+  call check_resolution(self, rhs)
 
-nf = common_vars(self, rhs)
-self%gfld3d(:,:,1:nf) = self%gfld3d(:,:,1:nf) - rhs%gfld3d(:,:,1:nf)
-
-if (self%lbc .and. rhs%lbc) then
-  self%xbound(:)   = self%xbound(:)   - rhs%xbound(:)
-  self%qbound(:,:) = self%qbound(:,:) - rhs%qbound(:,:)
-endif
+  self%U = self%U - rhs%U
+  self%V = self%V - rhs%V
+  self%T = self%T - rhs%T
+  self%Q = self%Q - rhs%Q
+  self%P = self%P - rhs%P
+  self%H = self%H - rhs%H
 
 return
 end subroutine self_sub
@@ -260,13 +241,14 @@ implicit none
 type(wrf_field), intent(inout) :: self
 real(kind=kind_real), intent(in) :: zz
 
-call check(self)
+  call check(self)
 
-self%gfld3d(:,:,:) = zz * self%gfld3d(:,:,:)
-if (self%lbc) then
-  self%xbound(:)   = zz * self%xbound(:)
-  self%qbound(:,:) = zz * self%qbound(:,:)
-endif
+  self%U = zz * self%U
+  self%V = zz * self%V
+  self%T = zz * self%T
+  self%Q = zz * self%Q
+  self%P = zz * self%P
+  self%H = zz * self%H
 
 return
 end subroutine self_mul
@@ -280,15 +262,14 @@ real(kind=kind_real), intent(in) :: zz
 type(wrf_field), intent(in)    :: rhs
 integer :: nf
 
-call check_resolution(self, rhs)
+  call check_resolution(self, rhs)
 
-nf = common_vars(self, rhs)
-self%gfld3d(:,:,1:nf) = self%gfld3d(:,:,1:nf) + zz * rhs%gfld3d(:,:,1:nf)
-
-if (self%lbc .and. rhs%lbc) then
-  self%xbound(:)   = self%xbound(:)   + zz * rhs%xbound(:)
-  self%qbound(:,:) = self%qbound(:,:) + zz * rhs%qbound(:,:)
-endif
+  self%U = self%U + zz * rhs%U
+  self%V = self%V + zz * rhs%V
+  self%T = self%T + zz * rhs%T
+  self%Q = self%Q + zz * rhs%Q
+  self%P = self%P + zz * rhs%P
+  self%H = self%H + zz * rhs%H
 
 return
 end subroutine axpy
@@ -299,33 +280,42 @@ subroutine dot_prod(fld1,fld2,zprod)
 implicit none
 type(wrf_field), intent(in) :: fld1, fld2
 real(kind=kind_real), intent(inout) :: zprod
+real(kind=kind_real) :: zz
+integer :: jx, jy, jz
 
-integer :: jx,jy,jz,jj
-real(kind=kind_real), allocatable :: zz(:)
+  call check_resolution(fld1, fld2)
 
-call check_resolution(fld1, fld2)
-if (fld1%nf /= fld2%nf .or. fld1%nl /= fld2%nl) then
-  call abor1_ftn("wrf_fields:field_prod error number of fields")
-endif
-!if (fld1%lbc .or. fld2%lbc) then
-!  call abor1_ftn("wrf_fields:field_prod should never dot_product full state")
-!endif
+  if (fld1%nf /= fld2%nf .or. fld1%nz /= fld2%nz) then
+     call abor1_ftn("wrf_fields:field_prod error number of fields")
+  endif
 
-allocate(zz(fld1%nl*fld1%nf))
-zz(:)=0.0_kind_real
-do jy=1,fld1%ny
-do jx=1,fld1%nx
-do jz=1,fld1%nl*fld1%nf
-  zz(jz) = zz(jz) + fld1%gfld3d(jx,jy,jz) * fld2%gfld3d(jx,jy,jz)
-enddo
-enddo
-enddo
+! if (fld1%lbc .or. fld2%lbc) then
+!    call abor1_ftn("wrf_fields:field_prod should never dot_product full state")
+! endif
 
-zprod=0.0_kind_real
-do jj=1,fld1%nl*fld1%nf
-  zprod=zprod+zz(jj)
-enddo
-deallocate(zz)
+  zprod = 0.0_kind_real
+  zz = 0.0_kind_real
+
+  do jy=1,fld1%ny
+     do jx=1,fld1%nx
+        do jz=1,fld1%nz
+           zz = zz + fld1%H(jx,jy,jz) * fld2%H(jx,jy,jz)
+           zz = zz + fld1%P(jx,jy,jz) * fld2%P(jx,jy,jz)
+           zz = zz + fld1%U(jx,jy,jz) * fld2%U(jx,jy,jz)
+           zz = zz + fld1%V(jx,jy,jz) * fld2%V(jx,jy,jz)
+           zz = zz + fld1%T(jx,jy,jz) * fld2%T(jx,jy,jz)
+           zz = zz + fld1%Q(jx,jy,jz) * fld2%Q(jx,jy,jz)
+        enddo
+     enddo
+  enddo
+
+! zprod = &
+!       + DOT_PRODUCT (fld1%U,fld2%U) &
+!       + DOT_PRODUCT (fld1%V,fld2%V) &
+!       + DOT_PRODUCT (fld1%T,fld2%T) &
+!       + DOT_PRODUCT (fld1%Q,fld2%Q) &
+!       + DOT_PRODUCT (fld1%P,fld2%P) &
+!       + DOT_PRODUCT (fld1%H,fld2%H)
 
 return
 end subroutine dot_prod
@@ -337,16 +327,19 @@ implicit none
 type(wrf_field), intent(inout) :: self
 type(wrf_field), intent(in)    :: rhs
 
-call check(self)
-call check(rhs)
+  call check(self)
+  call check(rhs)
 
-if (self%nx==rhs%nx .and. self%ny==rhs%ny) then
-  self%x(:,:,:) = self%x(:,:,:) + rhs%x(:,:,:)
-else
-  call abor1_ftn("wrf_fields:add_incr: not coded for low res increment yet")
-endif
-
-if (self%nf>1) self%x(:,:,self%nl+1:) = 0.0_kind_real
+  if (self%nx==rhs%nx .and. self%ny==rhs%ny) then
+      self%U = self%U + rhs%U
+      self%V = self%V + rhs%V
+      self%T = self%T + rhs%T
+      self%Q = self%Q + rhs%Q
+      self%P = self%P + rhs%P
+      self%H = self%H + rhs%H
+  else
+      call abor1_ftn("wrf_fields:add_incr: not coded for low res increment yet")
+  endif
 
 return
 end subroutine add_incr
@@ -359,20 +352,28 @@ type(wrf_field), intent(inout) :: lhs
 type(wrf_field), intent(in)    :: x1
 type(wrf_field), intent(in)    :: x2
 
-call check(lhs)
-call check(x1)
-call check(x2)
+  call check(lhs)
+  call check(x1)
+  call check(x2)
 
-call zeros(lhs)
-if (x1%nx==x2%nx .and. x1%ny==x2%ny) then
-  if (lhs%nx==x1%nx .and. lhs%ny==x1%ny) then
-    lhs%x(:,:,:) = x1%x(:,:,:) - x2%x(:,:,:)
+  call zeros(lhs)
+
+  if (x1%nx==x2%nx .and. x1%ny==x2%ny) then
+
+      if (lhs%nx==x1%nx .and. lhs%ny==x1%ny) then
+         lhs%U = x1%U - x2%U
+         lhs%V = x1%V - x2%V
+         lhs%T = x1%T - x2%T
+         lhs%Q = x1%Q - x2%Q
+         lhs%P = x1%P - x2%H
+         lhs%H = x1%H - x2%H
+      else
+         call abor1_ftn("wrf_fields:diff_incr: not coded for low res increment yet")
+      endif
+
   else
-    call abor1_ftn("wrf_fields:diff_incr: not coded for low res increment yet")
+      call abor1_ftn("wrf_fields:diff_incr: states not at same resolution")
   endif
-else
-  call abor1_ftn("wrf_fields:diff_incr: states not at same resolution")
-endif
 
 return
 end subroutine diff_incr
@@ -387,60 +388,154 @@ real(kind=kind_real), allocatable :: ztmp(:,:)
 real(kind=kind_real) :: dy1, dy2, ya, yb, dx1, dx2, xa, xb
 integer :: jx, jy, jf, iy, ia, ib
 
-call check(fld)
-call check(rhs)
+  call check(fld)
+  call check(rhs)
 
-if (fld%nx==rhs%nx .and. fld%ny==rhs%ny) then
-  call copy(fld, rhs)
-else
-  call abor1_ftn("wrf_fields:field_resol: untested code")
-
-allocate(ztmp(rhs%nx,rhs%nl*rhs%nf))
-dy1=1.0_kind_real/real(fld%ny,kind_real)
-dy2=1.0_kind_real/real(rhs%ny,kind_real)
-dx1=1.0_kind_real/real(fld%nx,kind_real)
-dx2=1.0_kind_real/real(rhs%nx,kind_real)
-do jy=1,fld%ny
-! North-south interpolation
-  if (jy==1 .or. jy==fld%ny) then
-    if (jy==1) then
-      iy=1
-    else
-      iy=rhs%ny
-    endif
-    do jx=1,rhs%nx
-      do jf=1,rhs%nl*rhs%nf
-        ztmp(jx,jf)=rhs%gfld3d(jx,iy,jf)
-      enddo
-    enddo
+  if (fld%nx==rhs%nx .and. fld%ny==rhs%ny) then
+      call copy(fld, rhs)
   else
-    call lin_weights(jy,dy1,dy2,ia,ib,ya,yb)
-    if (ib>rhs%ny) call abor1_ftn("wrf_fields:field_resol: ib too large")
-    do jx=1,rhs%nx
-      do jf=1,rhs%nl*rhs%nf
-        ztmp(jx,jf)=ya*rhs%gfld3d(jx,ia,jf)+yb*rhs%gfld3d(jx,ib,jf)
-      enddo
-    enddo
+      call abor1_ftn("wrf_fields:field_resol: untested code")
   endif
-! East-west interpolation (periodic)
-  do jx=1,fld%nx
-    call lin_weights(jx,dx1,dx2,ia,ib,xa,xb)
-    if (ib>rhs%nx) ib=ib-rhs%nx
-    do jf=1,fld%nl*rhs%nf
-      fld%gfld3d(jx,jy,jf)=xa*ztmp(jx,jf)+xb*ztmp(jx+1,jf)
-    enddo
-  enddo
-enddo
-deallocate(ztmp)
-
-endif
 
 return
 end subroutine change_resol
 
 ! ------------------------------------------------------------------------------
+subroutine read_file(self, c_conf, vdate)
 
-subroutine read_file(fld, c_conf, vdate)
+implicit none
+
+type(wrf_field), intent(inout) :: self    !< Fields
+type(c_ptr), intent(in)       :: c_conf   !< Configuration
+type(datetime), intent(inout) :: vdate    !< DateTime
+
+!type(wrf_geom), pointer :: self
+
+integer :: ncid,nlon_id,nlat_id,nlev_id
+integer :: P_id,H_id,U_id,V_id,T_id,QVAPOR_id,PB_id,PH_id,PHB_id
+integer :: west_east, south_north,bottom_top
+character (len=max_string_length) :: subr
+character (len=max_string_length), DIMENSION (:,:,:), ALLOCATABLE :: fldnames
+real(kind=kind_real), DIMENSION (:,:,:), ALLOCATABLE :: P,H,U,V,T,QVAPOR,PB,PH,PHB
+
+integer :: nf 
+nf = 0
+
+!> Read the WRF file name to load in the namelist gridfname
+if (.NOT. config_element_exists(c_conf,"filename")) then
+    write (*,'(/,A,/)') "ERROR: Cannot find entry 'filename' in 'Fields' record"
+ call abort
+endif
+
+ subr = config_get_string(c_conf, len(self%filename), "filename")
+
+!> Open file filename
+call ncerr(subr,nf90_open(trim(subr),nf90_nowrite,ncid))
+
+!> Get file dimensions
+call ncerr(subr,nf90_inq_dimid(ncid,'west_east',nlon_id))
+call ncerr(subr,nf90_inquire_dimension(ncid,nlon_id,len=west_east))
+
+call ncerr(subr,nf90_inq_dimid(ncid,'south_north',nlat_id))
+call ncerr(subr,nf90_inquire_dimension(ncid,nlat_id,len=south_north))
+
+call ncerr(subr,nf90_inq_dimid(ncid,'bottom_top',nlev_id))
+call ncerr(subr,nf90_inquire_dimension(ncid,nlev_id,len=bottom_top))
+
+write (*,*) " west_east   = ",west_east
+write (*,*) " south_north = ",south_north
+write (*,*) " bottom_top  = ",bottom_top
+
+!> Define dimensions
+   self%nx = west_east
+   self%ny = south_north
+   self%nz = bottom_top
+
+!> Allocate space
+   allocate (self%U(self%nx,self%ny,self%nz))
+   allocate (self%V(self%nx,self%ny,self%nz))
+   allocate (self%Q(self%nx,self%ny,self%nz))
+   allocate (self%T(self%nx,self%ny,self%nz))
+   allocate (self%P(self%nx,self%ny,self%nz))
+   allocate (self%H(self%nx,self%ny,self%nz))
+
+!> Initialize
+   U = 0_kind_real
+   V = 0_kind_real
+   T = 0_kind_real
+   QVAPOR = 0_kind_real
+   P = 0_kind_real
+   H = 0_kind_real
+
+!> Read temperature
+
+allocate (T  (west_east,south_north,bottom_top))
+call ncerr(subr,nf90_inq_varid(ncid,'T',T_id))
+call ncerr(subr,nf90_get_var(ncid,T_id,T,(/1,1,1/),(/west_east,south_north,bottom_top/)))
+
+!> Read pressure and pressure perturbation
+
+allocate (PB (west_east,south_north,bottom_top))
+call ncerr(subr,nf90_inq_varid(ncid,'PB',PB_id))
+call ncerr(subr,nf90_get_var(ncid,PB_id,PB,(/1,1,1/),(/west_east,south_north,bottom_top/)))
+
+allocate (P  (west_east,south_north,bottom_top))
+call ncerr(subr,nf90_inq_varid(ncid,'P',P_id))
+call ncerr(subr,nf90_get_var(ncid,P_id,P,(/1,1,1/),(/west_east,south_north,bottom_top/)))
+
+!> Read height and heigh perturbation
+
+allocate (PHB (west_east,south_north,bottom_top))
+call ncerr(subr,nf90_inq_varid(ncid,'PHB',PHB_id))
+call ncerr(subr,nf90_get_var(ncid,PHB_id,PHB,(/1,1,1/),(/west_east,south_north,bottom_top/)))
+
+allocate (PH (west_east,south_north,bottom_top))
+call ncerr(subr,nf90_inq_varid(ncid,'PH',PH_id))
+call ncerr(subr,nf90_get_var(ncid,PH_id,PH,(/1,1,1/),(/west_east,south_north,bottom_top/)))
+
+!> Read water vapor mixing ratio
+
+allocate (QVAPOR (west_east,south_north,bottom_top))
+call ncerr(subr,nf90_inq_varid(ncid,'QVAPOR',PH_id))
+call ncerr(subr,nf90_get_var(ncid,QVAPOR_id,QVAPOR,(/1,1,1/),(/west_east,south_north,bottom_top/)))
+
+!> Initialize fields counter
+   nf = 0
+
+!> Load pressure in hPa
+   self%P = (P + PB)*0.01
+   nf = nf + 1
+   self%fldnames(nf) = "P" 
+
+!> Load geopotential height
+   self%H = ( (PH+PHB) / 9.81 ) / 1000.
+   nf = nf + 1
+   self%fldnames(nf) = "H" 
+
+!> Load temperature in kelvin
+   self%T = (T+300.) * ( P/ 1000. )**(287.04/1004.)
+   nf = nf + 1
+   self%fldnames(nf) = "T" 
+
+!> Load water vapor mixing ratio
+   self%Q = QVAPOR
+   nf = nf + 1
+   self%fldnames(nf) = "Q" 
+
+
+!> Free memory
+  deallocate (T)
+  deallocate (P)
+  deallocate (PB)
+  deallocate (PH)
+  deallocate (PHB)
+  deallocate (QVAPOR)
+
+  return
+end subroutine read_file
+
+! ------------------------------------------------------------------------------
+subroutine read_file_qg(fld, c_conf, vdate)
 ! Needs more interface clean-up here...
 use iso_c_binding
 use datetime_mod
@@ -481,11 +576,11 @@ else
   open(unit=iunit, file=trim(filename), form='formatted', action='read')
 
   read(iunit,*) ix, iy, il, ic, is
-  if (ix /= fld%nx .or. iy /= fld%ny .or. il /= fld%nl) then
+  if (ix /= fld%nx .or. iy /= fld%ny .or. il /= fld%nz) then
     write (record,*) "wrf_fields:read_file: ", &
                    & "input fields have wrong dimensions: ",ix,iy,il
     call log%error(record)
-    write (record,*) "wrf_fields:read_file: expected: ",fld%nx,fld%ny,fld%nl
+    write (record,*) "wrf_fields:read_file: expected: ",fld%nx,fld%ny,fld%nz
     call log%error(record)
     call abor1_ftn("wrf_fields:read_file: input fields have wrong dimensions")
   endif
@@ -514,14 +609,14 @@ else
   enddo
   deallocate(zz)
 
-  if (fld%lbc) then
-    do jf=1,4
-      read(iunit,fmt1) fld%xbound(jf)
-    enddo
-    do jf=1,4
-      read(iunit,fmtn) (fld%qbound(jx,jf), jx=1,fld%nx)
-    enddo
-  endif
+! if (fld%lbc) then
+!   do jf=1,4
+!     read(iunit,fmt1) fld%xbound(jf)
+!   enddo
+!   do jf=1,4
+!     read(iunit,fmtn) (fld%qbound(jx,jf), jx=1,fld%nx)
+!   enddo
+! endif
 
   close(iunit)
 endif
@@ -529,7 +624,7 @@ endif
 call check(fld)
 
 return
-end subroutine read_file
+end subroutine read_file_qg
 
 ! ------------------------------------------------------------------------------
 
@@ -563,7 +658,7 @@ open(unit=iunit, file=trim(filename), form='formatted', action='write')
 is=0
 if (fld%lbc) is=1
 
-write(iunit,*) fld%nx, fld%ny, fld%nl, fld%nf, is
+write(iunit,*) fld%nx, fld%ny, fld%nz, fld%nf, is
 
 call datetime_to_string(vdate, sdate)
 write(iunit,*) sdate
@@ -572,20 +667,20 @@ if (fld%nx>9999)  call abor1_ftn("Format too small")
 write(cnx,'(I4)')fld%nx
 fmtn='('//trim(cnx)//fmt1//')'
 
-do jf=1,fld%nl*fld%nf
+do jf=1,fld%nz*fld%nf
   do jy=1,fld%ny
     write(iunit,fmtn) (fld%gfld3d(jx,jy,jf), jx=1,fld%nx)
   enddo
 enddo
 
-if (fld%lbc) then
-  do jf=1,4
-    write(iunit,fmt1) fld%xbound(jf)
-  enddo
-  do jf=1,4
-    write(iunit,fmtn) (fld%qbound(jx,jf), jx=1,fld%nx)
-  enddo
-endif
+!if (fld%lbc) then
+!  do jf=1,4
+!    write(iunit,fmt1) fld%xbound(jf)
+!  enddo
+!  do jf=1,4
+!    write(iunit,fmtn) (fld%qbound(jx,jf), jx=1,fld%nx)
+!  enddo
+!endif
 
 close(iunit)
 
@@ -604,11 +699,11 @@ integer :: jj,joff
 call check(fld)
 
 do jj=1,fld%nf
-  joff=(jj-1)*fld%nl
-  pstat(1,jj)=minval(fld%gfld3d(:,:,joff+1:joff+fld%nl))
-  pstat(2,jj)=maxval(fld%gfld3d(:,:,joff+1:joff+fld%nl))
-  pstat(3,jj)=sqrt(sum(fld%gfld3d(:,:,joff+1:joff+fld%nl)**2) &
-               & /real(fld%nl*fld%nx*fld%ny,kind_real))
+  joff=(jj-1)*fld%nz
+  pstat(1,jj)=minval(fld%gfld3d(:,:,joff+1:joff+fld%nz))
+  pstat(2,jj)=maxval(fld%gfld3d(:,:,joff+1:joff+fld%nz))
+  pstat(3,jj)=sqrt(sum(fld%gfld3d(:,:,joff+1:joff+fld%nz)**2) &
+               & /real(fld%nz*fld%nx*fld%ny,kind_real))
 enddo
 jj=jj-1
 
@@ -642,7 +737,7 @@ call check(fld)
 
 zz = 0.0
 
-do jf=1,fld%nl*fld%nf
+do jf=1,fld%nz*fld%nf
   do jy=1,fld%ny
     do jx=1,fld%nx
       zz = zz + fld%gfld3d(jx,jy,jf)*fld%gfld3d(jx,jy,jf)
@@ -650,7 +745,7 @@ do jf=1,fld%nl*fld%nf
   enddo
 enddo
 
-ii = fld%nl*fld%nf*fld%ny*fld%nx
+ii = fld%nz*fld%nf*fld%ny*fld%nx
 
 if (fld%lbc) then
   do jf=1,4
@@ -764,8 +859,8 @@ do jf = 1, common_vars
   if (x1%fldnames(jf)/=x2%fldnames(jf)) &
     & call abor1_ftn("common_vars: fields do not match")
 enddo
-if (x1%nl /= x2%nl) call abor1_ftn("common_vars: error number of levels")
-common_vars = x1%nl * common_vars
+if (x1%nz /= x2%nz) call abor1_ftn("common_vars: error number of levels")
+common_vars = x1%nz * common_vars
 
 end function common_vars
 
@@ -776,7 +871,7 @@ subroutine check_resolution(x1, x2)
 implicit none
 type(wrf_field), intent(in) :: x1, x2
 
-if (x1%nx /= x2%nx .or.  x1%ny /= x2%ny .or.  x1%nl /= x2%nl) then
+if (x1%nx /= x2%nx .or.  x1%ny /= x2%ny .or.  x1%nz /= x2%nz) then
   call abor1_ftn ("wrf_fields: resolution error")
 endif
 call check(x1)
@@ -795,18 +890,18 @@ bad = .not.associated(self%gfld3d)
 
 bad = bad .or. (size(self%gfld3d, 1) /= self%nx)
 bad = bad .or. (size(self%gfld3d, 2) /= self%ny)
-bad = bad .or. (size(self%gfld3d, 3) /= self%nl*self%nf)
+bad = bad .or. (size(self%gfld3d, 3) /= self%nz*self%nf)
 
 bad = bad .or. .not.associated(self%x)
 
 if (self%nf>1) then
-  bad = bad .or. .not.associated(self%q)
-  bad = bad .or. .not.associated(self%u)
-  bad = bad .or. .not.associated(self%v)
+  bad = bad .or. .not.allocated(self%q)
+  bad = bad .or. .not.allocated(self%u)
+  bad = bad .or. .not.allocated(self%v)
 else
-  bad = bad .or. associated(self%q)
-  bad = bad .or. associated(self%u)
-  bad = bad .or. associated(self%v)
+  bad = bad .or. allocated(self%q)
+  bad = bad .or. allocated(self%u)
+  bad = bad .or. allocated(self%v)
 endif
 
 !allocate(self%fldnames(self%nf))
@@ -824,7 +919,7 @@ else
 endif
 
 if (bad) then
-  write(0,*)'nx, ny, nf, nl, lbc = ',self%nx,self%ny,self%nf,self%nl,self%lbc
+  write(0,*)'nx, ny, nf, nl, lbc = ',self%nx,self%ny,self%nf,self%nz,self%lbc
   if (associated(self%gfld3d)) write(0,*)'shape(gfld3d) = ',shape(self%gfld3d)
   if (associated(self%xbound)) write(0,*)'shape(xbound) = ',shape(self%xbound)
   if (associated(self%qbound)) write(0,*)'shape(qbound) = ',shape(self%qbound)

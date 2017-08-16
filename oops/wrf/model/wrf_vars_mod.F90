@@ -12,11 +12,10 @@ public :: wrf_vars_registry
 
 ! ------------------------------------------------------------------------------
 
-!> Fortran derived type to represent QG model variables
+!> Fortran derived type to represent WRF model variables
 type :: wrf_vars
   integer :: nv
   character(len=1), allocatable :: fldnames(:) !< Variable identifiers
-  logical :: lbc
 end type wrf_vars
 
 #define LISTED_TYPE wrf_vars
@@ -42,10 +41,9 @@ character(len=1), intent(in) :: cvars(:)
 integer :: jj
 
 self%nv = size(cvars)
-self%lbc = .false.
 
 do jj=1,self%nv
-  if (cvars(jj)/="x" .and. cvars(jj)/="q" .and. cvars(jj)/="u" .and. cvars(jj)/="v") &
+  if (cvars(jj)/="U" .and. cvars(jj)/="V" .and. cvars(jj)/="T" .and. cvars(jj)/="P" .and. cvars(jj)/="Q" .and. cvars(jj)/="H") &
      & call abor1_ftn ("wrf_vars_setup: unknown field")
 enddo
 allocate(self%fldnames(self%nv))
@@ -70,30 +68,21 @@ call wrf_vars_registry%get(c_key_self, self)
 svar = config_get_string(c_conf,len(svar),"variables")
 select case (svar)
 case ("nl")
-  self%nv = 4
-  self%lbc = .true.
-  allocate(self%fldnames(4))
-  self%fldnames(:) = (/"x","q","u","v"/)
+  self%nv = 6
+  allocate(self%fldnames(6))
+  self%fldnames(:) = (/"P","H","T","Q","U","V"/)
 case ("tl")
-  self%nv = 4
-  self%lbc = .false.
-  allocate(self%fldnames(4))
-  self%fldnames(:) = (/"x","q","u","v"/)
+  self%nv = 6
+  allocate(self%fldnames(6))
+  self%fldnames(:) = (/"P","H","T","Q","U","V"/)
 case ("cv")
-  self%nv = 1
-  self%lbc = .true.
-  allocate(self%fldnames(1))
-  self%fldnames(1) = "x"
+  self%nv = 6
+  allocate(self%fldnames(6))
+  self%fldnames(:) = (/"P","H","T","Q","U","V"/)
 case ("ci")
-  self%nv = 1
-  self%lbc = .false.
-  allocate(self%fldnames(1))
-  self%fldnames(1) = "x"
-case ("x")
-  self%nv = 1
-  self%lbc = .false.
-  allocate(self%fldnames(1))
-  self%fldnames(1) = "x"
+  self%nv = 6
+  allocate(self%fldnames(6))
+  self%fldnames(:) = (/"P","H","T","Q","U","V"/)
 case default
   call abor1_ftn("c_wrf_vars_create: undefined variables")
 end select
@@ -126,7 +115,6 @@ type(wrf_vars), intent(in)    :: self
 type(wrf_vars), intent(inout) :: other
 
 other%nv = self%nv
-other%lbc = self%lbc
 
 allocate(other%fldnames(other%nv))
 other%fldnames(:)=self%fldnames(:)
@@ -161,7 +149,6 @@ call wrf_vars_registry%get(c_key_self, self)
 
 c_nv = self%nv
 c_nl = 0
-if (self%lbc) c_nl = 1
 
 !self%fldnames(:)
 

@@ -14,6 +14,7 @@ implicit none
 private
 public :: wrf_geom
 public :: wrf_geom_registry
+public :: max_string_length
 
 ! ------------------------------------------------------------------------------
 
@@ -32,7 +33,8 @@ type :: wrf_geom
   real(kind=kind_real), DIMENSION (:,:), ALLOCATABLE :: lon
   real(kind=kind_real), DIMENSION (:,:), ALLOCATABLE :: lat
   real(kind=kind_real), DIMENSION (:,:), ALLOCATABLE :: mask
-  real(kind=kind_real), DIMENSION (:),   ALLOCATABLE :: pres
+  real(kind=kind_real), DIMENSION (:),   ALLOCATABLE :: levs
+! real(kind=kind_real), DIMENSION (:),   ALLOCATABLE :: pres
 end type wrf_geom
 
 #define LISTED_TYPE wrf_geom
@@ -61,7 +63,7 @@ type(wrf_geom), pointer :: self
 !type(datetime), intent(inout) :: vdate    !< DateTime
 
 integer :: ncid,nlon_id,nlat_id,nlev_id
-integer :: lon_id,lat_id,pres_id,mask_id
+integer :: lon_id,lat_id,mask_id,levs_id,pres_id
 character (len=max_string_length) :: subr
 
 call wrf_geom_registry%init()
@@ -105,7 +107,8 @@ write (*,*) " DY  = ",self%dy
 allocate(self%lon(self%nlon,self%nlat))
 allocate(self%lat(self%nlon,self%nlat))
 allocate(self%mask(self%nlon,self%nlat))
-allocate(self%pres(self%nlev))
+allocate(self%levs(self%nlev))
+!allocate(self%pres(self%nlev))
 
 !> Read longitude XLONG
 call ncerr(subr,nf90_inq_varid(ncid,'XLONG',lon_id))
@@ -122,10 +125,15 @@ call ncerr(subr,nf90_inq_varid(ncid,'LANDMASK',mask_id))
 call ncerr(subr,nf90_get_var(ncid,mask_id,self%mask,(/1,1,1/),(/self%nlon,self%nlat,1/)))
 write (*,*) "MASK = ",self%mask(1,1)
 
+!> Read vertical levels distribution
+call ncerr(subr,nf90_inq_varid(ncid,'ZNU',levs_id))
+call ncerr(subr,nf90_get_var(ncid,levs_id,self%levs))
+write (*,*) "ZNU = ",self%levs(1)
+
 !> Read pressure PB
-call ncerr(subr,nf90_inq_varid(ncid,'PB',pres_id))
-call ncerr(subr,nf90_get_var(ncid,pres_id,self%pres))
-write (*,*) "PB = ",self%pres(1)
+!call ncerr(subr,nf90_inq_varid(ncid,'PB',pres_id))
+!call ncerr(subr,nf90_get_var(ncid,pres_id,self%pres))
+!write (*,*) "PB = ",self%pres(1)
 
 !> close file
 call ncerr(subr,nf90_close(ncid))
@@ -158,7 +166,8 @@ other%dy = self%dy
 other%lon = self%lon
 other%lat = self%lat
 other%mask = self%mask
-other%pres = self%pres
+other%levs = self%levs
+!other%pres = self%pres
 
 end subroutine c_wrf_geo_clone
 
@@ -174,7 +183,8 @@ type(wrf_geom), pointer :: self
     if (allocated(self%lon))  deallocate(self%lon)
     if (allocated(self%lat))  deallocate(self%lat)
     if (allocated(self%mask)) deallocate(self%mask)
-    if (allocated(self%pres)) deallocate(self%pres)
+!   if (allocated(self%pres)) deallocate(self%pres)
+    if (allocated(self%levs)) deallocate(self%levs)
     call wrf_geom_registry%remove(c_key_self)
 
 end subroutine c_wrf_geo_delete
