@@ -156,18 +156,18 @@ double Fields::norm() const {
 void Fields::print(std::ostream & os) const {
   int nx = -1;
   int ny = -1;
+  int nz = -1;
   int nf = -1;
-  int nb = -1;
-  wrf_field_sizes_f90(keyFlds_, nx, ny, nf, nb);
-  os << std::endl << "  Resolution = " << nx << ", " << ny
-     << ", Fields = " << nf << ", " << nb;
-  nf += nb;
-  std::vector<double> zstat(3*nf);
-  wrf_field_gpnorm_f90(keyFlds_, nf, zstat[0]);
-  for (int jj = 0; jj < nf; ++jj) {
-    os << std::endl << "  Min=" << zstat[3*jj]
-       << ", Max=" << zstat[3*jj+1] << ", RMS=" << zstat[3*jj+2];
-  }
+  wrf_field_sizes_f90(keyFlds_, nx, ny, nz, nf);
+  os << std::endl << "  Resolution = " << nx << ", " << ny << ", " << nz
+     << ", Fields = " << nf;
+// nf += nb;
+//  std::vector<double> zstat(3*nf);
+//  wrf_field_gpnorm_f90(keyFlds_, nf, zstat[0]);
+//  for (int jj = 0; jj < nf; ++jj) {
+//    os << std::endl << "  Min=" << zstat[3*jj]
+//       << ", Max=" << zstat[3*jj+1] << ", RMS=" << zstat[3*jj+2];
+//  }
 }
 // -----------------------------------------------------------------------------
 }  // namespace wrf

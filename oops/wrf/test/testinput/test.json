@@ -21,6 +21,7 @@
   },
   "test_length": "P1D",
   "state": {
+    "filename" : "/glade/p/ral/nsap/jcsda/data/wrf/data/2017072800/wrfout_d01_2017-07-28_06:00:00.001",
     "read_from_file": "0",
     "top_layer_depth": "5500.0",
     "bottom_layer_depth": "4500.0",
