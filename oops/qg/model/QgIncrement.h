@@ -68,6 +68,7 @@ class QgIncrement : public oops::GeneralizedDepartures,
   void diff(const QgState &, const QgState &);
   void zero();
   void zero(const util::DateTime &);
+  void dirac(const eckit::Configuration &);
   QgIncrement & operator =(const QgIncrement &);
   QgIncrement & operator+=(const QgIncrement &);
   QgIncrement & operator-=(const QgIncrement &);
