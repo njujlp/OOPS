@@ -27,7 +27,7 @@
 // Forward declarations
 namespace lorenz95 {
   class IncrementL95;
-  class Resolution;
+  class StateL95;
 
 /// Localization matrix for Lorenz 95 model.
 
@@ -37,7 +37,7 @@ class LocalizationMatrixL95: public oops::LocalizationBase<L95Traits>,
  public:
   static const std::string classname() {return "lorenz95::LocalizationMatrixL95";}
 
-  LocalizationMatrixL95(const Resolution &, const eckit::Configuration &);
+  LocalizationMatrixL95(const StateL95 &, const eckit::Configuration &);
   ~LocalizationMatrixL95();
   void multiply(IncrementL95 &) const;
 

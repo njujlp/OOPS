@@ -37,11 +37,6 @@ class QgGeometry : public util::Printable,
   QgGeometry(const QgGeometry &);
   ~QgGeometry();
 
-  std::vector<double> getLats() const;
-  std::vector<double> getLons() const;
-  std::vector<double> getLevs() const;
-  std::vector<int> getMask(const int &) const;
-
   int& toFortran() {return keyGeom_;}
   const int& toFortran() const {return keyGeom_;}
 
