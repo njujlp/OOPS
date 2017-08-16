@@ -15,8 +15,7 @@ use tools_display, only: msgerror
 use tools_kinds, only: kind_real
 use tools_missing, only: msi,msr,isnotmsi,isnotmsr
 use type_mpl, only: mpl
-use type_ndata, only: ndatatype
-use type_randgen, only: rand_integer
+use type_randgen, only: randgentype,rand_integer
 
 implicit none
 
@@ -43,12 +42,12 @@ contains
 ! Subroutine: create_mesh
 !> Purpose: create mesh
 !----------------------------------------------------------------------
-subroutine create_mesh(ndata,n,lon,lat,lred,mesh)
+subroutine create_mesh(randgen,n,lon,lat,lred,mesh)
 
 implicit none
 
 ! Passed variables
-type(ndatatype),intent(in) :: ndata
+type(randgentype),intent(in) :: randgen
 integer,intent(in) :: n
 real(kind_real),intent(in) :: lon(n)
 real(kind_real),intent(in) :: lat(n)
@@ -95,7 +94,7 @@ do j=1,n
    end if
 end do
 do i=mesh%nnr,2,-1
-   call rand_integer(ndata%rng,1,mesh%nnr,j)
+   call rand_integer(randgen,1,mesh%nnr,j)
    k = mesh%order(j)
    mesh%order(j) = mesh%order(i)
    mesh%order(i) = k

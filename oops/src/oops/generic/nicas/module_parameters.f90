@@ -21,7 +21,6 @@ use tools_display, only: msgerror,msgwarning
 use tools_kinds,only: kind_real
 use tools_missing, only: msvali,msvalr,msi,msr,isnotmsr,isnotmsi
 use tools_nc, only: ncfloat,ncerr
-use type_ctree, only: ctreetype,create_ctree,find_nearest_neighbors,delete_ctree
 use type_mesh, only: meshtype,create_mesh
 use type_mpl, only: mpl,mpl_bcast
 use type_ndata, only: ndatatype
@@ -52,6 +51,10 @@ integer,allocatable :: ifors(:)
 real(kind_real) :: distnorm
 real(kind_real) :: rh0(ndata%nc0,ndata%nl0),rv0(ndata%nc0,ndata%nl0),rh0min(ndata%nc0)
 real(kind_real),allocatable :: rh1(:,:),rv1(:,:),rh2(:,:),rv2(:,:),rhs(:),rvs(:)
+
+! Compute grid mesh
+write(mpl%unit,'(a7,a)') '','Compute grid mesh'
+call compute_grid_mesh(ndata)
 
 ! Forced points in the subrid (TODO: rethink that)
 ndata%nfor = 1
@@ -235,10 +238,6 @@ do is=1,ndata%ns
    rvs(is) = rv2(ndata%is_to_ic1(is),ndata%is_to_il1(is))
 end do
 
-! Compute grid mesh
-write(mpl%unit,'(a7,a)') '','Compute grid mesh'
-call compute_grid_mesh(ndata)
-
 ! Compute horizontal interpolation data
 write(mpl%unit,'(a7,a)') '','Compute horizontal interpolation data'
 call compute_interp_h(ndata)
@@ -294,15 +293,91 @@ implicit none
 type(ndatatype),intent(inout) :: ndata !< Sampling data
 
 ! Local variables
-integer :: nc0,lnew,info,ic0,jc0,kc0,i,ibnd,il0
-integer,allocatable :: ic0_bnd(:,:,:)
-real(kind_real) :: latbnd(2),lonbnd(2),v1(3),v2(3)
-real(kind_real),allocatable :: x(:),y(:),z(:),dist(:)
+integer :: nc0,info,ic0,jc0,kc0,i,ibnd,il0,nt,it
+integer,allocatable :: ltri(:,:),ic0_bnd(:,:,:)
+real(kind_real) :: area,areas,frac,latbnd(2),lonbnd(2),v1(3),v2(3)
 logical :: init
 type(meshtype) :: mesh
 
 ! Create mesh
-if (nam%mask_check.or.nam%network) call create_mesh(ndata,ndata%nc0,ndata%lon,ndata%lat,.true.,mesh)
+if ((.not.allocated(ndata%area)).or.nam%mask_check.or.nam%network) &
+ & call create_mesh(ndata%rng,ndata%nc0,ndata%lon,ndata%lat,.true.,mesh)
+
+if (.not.allocated(ndata%area)) then
+   ! Allocation
+   allocate(ndata%area(ndata%nl0))
+   allocate(ltri(6,2*(mesh%nnr-2)))
+
+   ! Create triangles list
+   call trlist(mesh%nnr,mesh%list,mesh%lptr,mesh%lend,6,nt,ltri,info)
+
+   ! Compute area
+   ndata%area = 0.0
+   do it=1,nt
+      area = areas((/mesh%x(ltri(1,it)),mesh%y(ltri(1,it)),mesh%z(ltri(1,it))/), &
+                 & (/mesh%x(ltri(2,it)),mesh%y(ltri(2,it)),mesh%z(ltri(2,it))/), &
+                 & (/mesh%x(ltri(3,it)),mesh%y(ltri(3,it)),mesh%z(ltri(3,it))/))
+      do il0=1,ndata%nl0
+         frac = float(count(ndata%mask(mesh%order(ltri(1:3,it)),il0)))/3.0
+         ndata%area(il0) = ndata%area(il0)+frac*area
+      end do  
+   end do
+
+   ! Release memory
+   deallocate(ltri)
+end if
+
+if (nam%mask_check) then
+   ! Allocation
+   allocate(ndata%nbnd(ndata%nl0))
+   allocate(ic0_bnd(2,mesh%nnr,ndata%nl0))
+   
+   ! Find border points
+   do il0=1,ndata%nl0
+      ndata%nbnd(il0) = 0
+      do ic0=1,mesh%nnr
+         ! Check mask points only
+         if (.not.ndata%mask(mesh%order(ic0),il0)) then
+            i = mesh%lend(ic0)
+            init = .true.
+            do while ((i/=mesh%lend(ic0)).or.init)
+               jc0 = abs(mesh%list(i))
+               kc0 = abs(mesh%list(mesh%lptr(i)))
+               if (.not.ndata%mask(mesh%order(jc0),il0).and.ndata%mask(mesh%order(kc0),il0)) then
+                  ! Create a new boundary arc
+                  ndata%nbnd(il0) = ndata%nbnd(il0)+1
+                  if (ndata%nbnd(il0)>mesh%nnr) call msgerror('too many boundary arcs')
+                  ic0_bnd(1,ndata%nbnd(il0),il0) = mesh%order(ic0)
+                  ic0_bnd(2,ndata%nbnd(il0),il0) = mesh%order(jc0)
+               end if
+               i = mesh%lptr(i)
+               init = .false.
+            end do
+         end if
+      end do
+   end do
+   
+   ! Allocation
+   allocate(ndata%xbnd(2,maxval(ndata%nbnd),ndata%nl0))
+   allocate(ndata%ybnd(2,maxval(ndata%nbnd),ndata%nl0))
+   allocate(ndata%zbnd(2,maxval(ndata%nbnd),ndata%nl0))
+   allocate(ndata%vbnd(3,maxval(ndata%nbnd),ndata%nl0))
+   
+   do il0=1,ndata%nl0
+      ! Compute boundary arcs
+      do ibnd=1,ndata%nbnd(il0)
+         latbnd = ndata%lat(ic0_bnd(:,ibnd,il0))
+         lonbnd = ndata%lon(ic0_bnd(:,ibnd,il0))
+         call trans(2,latbnd,lonbnd,ndata%xbnd(:,ibnd,il0),ndata%ybnd(:,ibnd,il0),ndata%zbnd(:,ibnd,il0))
+      end do
+      do ibnd=1,ndata%nbnd(il0)
+         v1 = (/ndata%xbnd(1,ibnd,il0),ndata%ybnd(1,ibnd,il0),ndata%zbnd(1,ibnd,il0)/)
+         v2 = (/ndata%xbnd(2,ibnd,il0),ndata%ybnd(2,ibnd,il0),ndata%zbnd(2,ibnd,il0)/)
+         call vector_product(v1,v2,ndata%vbnd(:,ibnd,il0))
+      end do
+   end do
+end if
+
 
 if (nam%network) then
    ! Compute distances
@@ -355,57 +430,6 @@ if (nam%network) then
          end if
       end do
    end if
-end if
-
-if (nam%mask_check) then
-   ! Allocation
-   allocate(ndata%nbnd(ndata%nl0))
-   allocate(ic0_bnd(2,mesh%nnr,ndata%nl0))
-   
-   ! Find border points
-   do il0=1,ndata%nl0
-      ndata%nbnd(il0) = 0
-      do ic0=1,mesh%nnr
-         ! Check mask points only
-         if (.not.ndata%mask(mesh%order(ic0),il0)) then
-            i = mesh%lend(ic0)
-            init = .true.
-            do while ((i/=mesh%lend(ic0)).or.init)
-               jc0 = abs(mesh%list(i))
-               kc0 = abs(mesh%list(mesh%lptr(i)))
-               if (.not.ndata%mask(mesh%order(jc0),il0).and.ndata%mask(mesh%order(kc0),il0)) then
-                  ! Create a new boundary arc
-                  ndata%nbnd(il0) = ndata%nbnd(il0)+1
-                  if (ndata%nbnd(il0)>mesh%nnr) call msgerror('too many boundary arcs')
-                  ic0_bnd(1,ndata%nbnd(il0),il0) = mesh%order(ic0)
-                  ic0_bnd(2,ndata%nbnd(il0),il0) = mesh%order(jc0)
-               end if
-               i = mesh%lptr(i)
-               init = .false.
-            end do
-         end if
-      end do
-   end do
-   
-   ! Allocation
-   allocate(ndata%xbnd(2,maxval(ndata%nbnd),ndata%nl0))
-   allocate(ndata%ybnd(2,maxval(ndata%nbnd),ndata%nl0))
-   allocate(ndata%zbnd(2,maxval(ndata%nbnd),ndata%nl0))
-   allocate(ndata%vbnd(3,maxval(ndata%nbnd),ndata%nl0))
-   
-   do il0=1,ndata%nl0
-      ! Compute boundary arcs
-      do ibnd=1,ndata%nbnd(il0)
-         latbnd = ndata%lat(ic0_bnd(:,ibnd,il0))
-         lonbnd = ndata%lon(ic0_bnd(:,ibnd,il0))
-         call trans(2,latbnd,lonbnd,ndata%xbnd(:,ibnd,il0),ndata%ybnd(:,ibnd,il0),ndata%zbnd(:,ibnd,il0))
-      end do
-      do ibnd=1,ndata%nbnd(il0)
-         v1 = (/ndata%xbnd(1,ibnd,il0),ndata%ybnd(1,ibnd,il0),ndata%zbnd(1,ibnd,il0)/)
-         v2 = (/ndata%xbnd(2,ibnd,il0),ndata%ybnd(2,ibnd,il0),ndata%zbnd(2,ibnd,il0)/)
-         call vector_product(v1,v2,ndata%vbnd(:,ibnd,il0))
-      end do
-   end do
 end if
 
 end subroutine compute_grid_mesh

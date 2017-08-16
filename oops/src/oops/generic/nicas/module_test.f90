@@ -19,10 +19,10 @@ use module_apply_nicas_sqrt, only: apply_nicas_sqrt,apply_nicas_sqrt_ad
 use module_namelist, only: nam
 use omp_lib
 use tools_const, only: deg2rad,rad2deg,sphere_dist
+use tools_dirac, only: setup_dirac_points
 use tools_display, only: msgerror
 use tools_kinds,only: kind_real
 use tools_missing, only: msi,msr,isnotmsi,isnotmsr
-use type_ctree, only: ctreetype,create_ctree,delete_ctree,find_nearest_neighbors
 use type_mpl, only: mpl,mpl_bcast
 use type_ndata, only: ndatatype,ndataloctype
 use type_timer, only: timertype,timer_start,timer_end
@@ -268,20 +268,30 @@ type(ndatatype),intent(in) :: ndata          !< Sampling data
 type(ndataloctype),intent(inout) :: ndataloc !< Sampling data, local
 
 ! Local variables
-integer :: idir,ic0_dir(nam%ndir),ic0a_dir(nam%ndir),il0_dir
+integer :: il0,il0dir,ic0dir(nam%ndir),idir
 real(kind_real),allocatable :: fld(:,:)
 
-! Define dirac
-call define_dirac(ndata,ndataloc,ic0_dir,ic0a_dir,il0_dir)
+if (mpl%main) then
+   ! Find level index
+   do il0=1,ndata%nl0
+      if (nam%levs(il0)==nam%levdir) il0dir = il0
+   end do
 
-! Allocation
-allocate(fld(ndataloc%nc0a,ndataloc%nl0))
+   ! Setup dirac field
+   call setup_dirac_points(ndata%nc0,ndata%lon,ndata%lat,ndata%mask(:,il0dir),nam%ndir,nam%londir,nam%latdir,ic0dir)
 
-! Generate diracs field
-fld = 0.0
-do idir=1,nam%ndir
-   if (isnotmsi(ic0a_dir(idir))) fld(ic0a_dir(idir),il0_dir) = 1.0
-end do
+   ! Allocation
+   allocate(fld(ndata%nc0,ndata%nl0))
+
+   ! Generate diracs field
+   fld = 0.0
+   do idir=1,nam%ndir
+      fld(ic0dir(idir),il0dir) = 1.0
+   end do
+end if
+
+! Global to local
+call fld_com_gl(ndata,ndataloc,fld)
 
 ! Apply NICAS method
 if (nam%lsqrt) then
@@ -301,77 +311,13 @@ if (mpl%main) then
    ! Print results
    write(mpl%unit,'(a7,a)') '','Normalization:'
    do idir=1,nam%ndir
-      write(mpl%unit,'(a10,f6.1,a,f6.1,a,f10.7)') '',nam%dirlon(idir),' / ',nam%dirlat(idir),': ',fld(ic0_dir(idir),il0_dir)
+      write(mpl%unit,'(a10,f6.1,a,f6.1,a,f10.7)') '',nam%londir(idir),' / ',nam%latdir(idir),': ',fld(ic0dir(idir),il0dir)
    end do
    write(mpl%unit,'(a7,a,f10.7,a,f10.7)') '','Min - max: ', &
- & minval(fld(:,il0_dir),mask=ndata%mask(:,il0_dir)),' - ',maxval(fld(:,il0_dir),mask=ndata%mask(:,il0_dir))
+ & minval(fld(:,il0dir),mask=ndata%mask(:,il0dir)),' - ',maxval(fld(:,il0dir),mask=ndata%mask(:,il0dir))
 end if
 
 end subroutine test_dirac
-
-!----------------------------------------------------------------------
-! Subroutine: define_dirac
-!> Purpose: define field with Dirac functions
-!----------------------------------------------------------------------
-subroutine define_dirac(ndata,ndataloc,ic0_dir,ic0a_dir,il0_dir)
-
-implicit none
-
-! Passed variables
-type(ndatatype),intent(in) :: ndata       !< Sampling data
-type(ndataloctype),intent(in) :: ndataloc !< Sampling data, local
-integer,intent(out) :: ic0_dir(nam%ndir)
-integer,intent(out) :: ic0a_dir(nam%ndir)
-integer,intent(out) :: il0_dir
-
-! Local variables
-integer :: ic0,idir,il0,ic0a,iproc
-integer,allocatable :: mask_ctree(:)
-real(kind_real) :: dum(1)
-type(ctreetype) :: ctree
-
-if (mpl%main) then
-   ! Compute cover tree
-   allocate(mask_ctree(ndata%nc0))
-   do ic0=1,ndata%nc0
-      if (any(ndata%mask(ic0,:))) then
-         mask_ctree(ic0) = 1
-      else
-         mask_ctree(ic0) = 0
-      end if
-   end do
-   ctree = create_ctree(ndata%nc0,dble(ndata%lon),dble(ndata%lat),mask_ctree)
-
-   ! Compute nearest neighbors
-   do idir=1,nam%ndir
-      call find_nearest_neighbors(ctree,dble(nam%dirlon(idir)*deg2rad), &
-    & dble(nam%dirlat(idir)*deg2rad),1,ic0_dir(idir:idir),dum)
-   end do
-   
-   ! Find level index
-   do il0=1,ndata%nl0
-      if (nam%levs(il0)==nam%dirlev) il0_dir = il0
-   end do
-
-   ! Release memory
-   deallocate(mask_ctree)
-   call delete_ctree(ctree)
-end if
-
-! Broadcast
-call mpl_bcast(ic0_dir,mpl%ioproc)
-call mpl_bcast(il0_dir,mpl%ioproc)
-
-! Transfer to local
-call msi(ic0a_dir)
-do idir=1,nam%ndir
-   ic0 = ic0_dir(idir)
-   ic0a = ndata%ic0_to_ic0a(ic0)
-   iproc = ndata%ic0_to_iproc(ic0)
-   if (iproc==mpl%myproc) ic0a_dir(idir) = ic0a
-end do
-
-end subroutine define_dirac
 
 !----------------------------------------------------------------------
 ! Subroutine: test_perf

@@ -459,7 +459,7 @@ type(ctreetype) :: ctree
 type(meshtype) :: mesh
 
 ! Create mesh
-call create_mesh(ndata,n_src,lon_src,lat_src,.false.,mesh)
+call create_mesh(ndata%rng,n_src,lon_src,lat_src,.false.,mesh)
 
 ! Compute cover tree
 allocate(mask_ctree(mesh%nnr))
@@ -470,12 +470,12 @@ ctree = create_ctree(mesh%nnr,dble(lon_src(mesh%order)),dble(lat_src(mesh%order)
 n_s = 0
 do i_dst=1,n_dst
    if (mask_dst(i_dst)) then
-      ! Transform to cartesian coordinates
-      call trans(1,lat_dst(i_dst),lon_dst(i_dst),p(1),p(2),p(3))
-
       ! Find nearest neighbor
       call find_nearest_neighbors(ctree,dble(lon_dst(i_dst)), &
     & dble(lat_dst(i_dst)),1,inn,dum)
+
+      ! Transform to cartesian coordinates
+      call trans(1,lat_dst(i_dst),lon_dst(i_dst),p(1),p(2),p(3))
 
       ! Compute barycentric coordinates
       call trfind(inn(1),dble(p),mesh%nnr,mesh%x,mesh%y,mesh%z,mesh%list,mesh%lptr,mesh%lend, &
