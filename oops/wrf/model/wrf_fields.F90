@@ -537,14 +537,14 @@ call ncerr(subr,nf90_get_var(ncid,V_id,V,(/1,1,1/),(/west_east,south_north+1,bot
    nf = 0
 
 !> Load pressure in hPa
-   P = (P + PB) / 100.
+   P = (P + PB) / 100_kind_real
    fld%P = P
 
    nf = nf + 1
    fld%fldnames(nf) = "P" 
 
 !> Load geopotential height in m
-   H = (PH+PHB) / 9.81
+   H = (PH+PHB) / 9.81_kind_real
    fld%H = H
    nf = nf + 1
    fld%fldnames(nf) = "H" 
@@ -588,111 +588,66 @@ call ncerr(subr,nf90_get_var(ncid,V_id,V,(/1,1,1/),(/west_east,south_north+1,bot
   deallocate (PHB)
   deallocate (QVAPOR)
 
-write (*,*) " P = ",fld%P(west_east/2,south_north/2,bottom_top/2)
-write (*,*) " H = ",fld%H(west_east/2,south_north/2,bottom_top/2)
-write (*,*) " T = ",fld%T(west_east/2,south_north/2,bottom_top/2)
-write (*,*) " Q = ",fld%Q(west_east/2,south_north/2,bottom_top/2)
-write (*,*) " U = ",fld%U(west_east/2,south_north/2,bottom_top/2)
-write (*,*) " V = ",fld%V(west_east/2,south_north/2,bottom_top/2)
+  write (*,*) " P = ",fld%P(west_east/2,south_north/2,bottom_top/2)
+  write (*,*) " H = ",fld%H(west_east/2,south_north/2,bottom_top/2)
+  write (*,*) " T = ",fld%T(west_east/2,south_north/2,bottom_top/2)
+  write (*,*) " Q = ",fld%Q(west_east/2,south_north/2,bottom_top/2)
+  write (*,*) " U = ",fld%U(west_east/2,south_north/2,bottom_top/2)
+  write (*,*) " V = ",fld%V(west_east/2,south_north/2,bottom_top/2)
 
   return
 end subroutine read_file
 
 ! ------------------------------------------------------------------------------
-subroutine read_file_qg(fld, c_conf, vdate)
-! Needs more interface clean-up here...
-use iso_c_binding
-use datetime_mod
-use fckit_log_module, only : log
+subroutine write_file(fld, c_conf, vdate)
 
 implicit none
-type(wrf_field), intent(inout) :: fld      !< Fields
+
+type(wrf_field), intent(inout) :: fld    !< Fields
 type(c_ptr), intent(in)       :: c_conf   !< Configuration
 type(datetime), intent(inout) :: vdate    !< DateTime
 
-integer, parameter :: iunit=10
-integer, parameter :: max_string_length=800 ! Yuk!
-character(len=max_string_length+50) :: record
-character(len=max_string_length) :: filename
+!type(wrf_geom), pointer :: self
+
 character(len=20) :: sdate, fmtn
-character(len=4)  :: cnx
-character(len=11) :: fmt1='(X,ES24.16)'
-character(len=1024)  :: buf
-integer :: ic, iy, il, ix, is, jx, jy, jf, iread, nf
-real(kind=kind_real), allocatable :: zz(:)
 
-iread = 1
-if (config_element_exists(c_conf,"read_from_file")) then
-  iread = config_get_int(c_conf,"read_from_file")
-endif
-if (iread==0) then
-  call log%warning("wrf_fields:read_file: Inventing State")
-  call invent_state(fld,c_conf)
-  sdate = config_get_string(c_conf,len(sdate),"date")
-  WRITE(buf,*) 'validity date is: '//sdate
-  call log%info(buf)
-  call datetime_set(sdate, vdate)
-else
-  call zeros(fld)
-  filename = config_get_string(c_conf,len(filename),"filename")
-  WRITE(buf,*) 'wrf_field:read_file: opening '//filename
-  call log%info(buf)
-  open(unit=iunit, file=trim(filename), form='formatted', action='read')
+integer :: ncid,nlon_id,nlat_id,nlev_id
+integer :: P_id,H_id,U_id,V_id,T_id,QVAPOR_id,PB_id,PH_id,PHB_id
+integer :: west_east, south_north,bottom_top
+character (len=max_string_length) :: subr
+character (len=max_string_length) :: filename
 
-  read(iunit,*) ix, iy, il, ic, is
-  if (ix /= fld%nx .or. iy /= fld%ny .or. il /= fld%nz) then
-    write (record,*) "wrf_fields:read_file: ", &
-                   & "input fields have wrong dimensions: ",ix,iy,il
-    call log%error(record)
-    write (record,*) "wrf_fields:read_file: expected: ",fld%nx,fld%ny,fld%nz
-    call log%error(record)
-    call abor1_ftn("wrf_fields:read_file: input fields have wrong dimensions")
-  endif
+    call check(fld)
 
-  read(iunit,*) sdate
-  WRITE(buf,*) 'validity date is: '//sdate
-  call log%info(buf)
-  call datetime_set(sdate, vdate)
+    filename = config_get_string(c_conf, len(filename), "filename")
+    varname = config_get_string(c_conf, len(varname), "varname")
 
-  if (fld%nx>9999)  call abor1_ftn("Format too small")
-  write(cnx,'(I4)')fld%nx
-  fmtn='('//trim(cnx)//fmt1//')'
 
-  nf = min(fld%nf, ic)
-  do jf=1,il*nf
-    do jy=1,fld%ny
-      read(iunit,fmtn) (fld%gfld3d(jx,jy,jf), jx=1,fld%nx)
-    enddo
-  enddo
-! Skip un-necessary data from file if any
-  allocate(zz(fld%nx))
-  do jf=nf*il+1, ic*il
-    do jy=1,fld%ny
-      read(iunit,fmtn) (zz(jx), jx=1,fld%nx)
-    enddo
-  enddo
-  deallocate(zz)
+! Define dimensions and variable if necessary
+if (ierr/=nf90_noerr) then
+   call ncerr(subr,nf90_redef(ncid))
+   ierr = nf90_inq_dimid(ncid,'west_east',nlon_id)
+   if (ierr/=nf90_noerr) call ncerr(subr,nf90_def_dim(ncid,'west_east',sdata%nlon,nlon_id))
+   ierr = nf90_inq_dimid(ncid,'south_north',nlat_id)
+   if (ierr/=nf90_noerr) call
+ncerr(subr,nf90_def_dim(ncid,'south_north',sdata%nlat,nlat_id))
+   ierr = nf90_inq_dimid(ncid,'bottom_top',nlev_id)
+   if (ierr/=nf90_noerr) call
+ncerr(subr,nf90_def_dim(ncid,'bottom_top',sdata%nl0,nlev_id))
+   ierr = nf90_inq_dimid(ncid,'Time',nt_id)
+   if (ierr/=nf90_noerr) call ncerr(subr,nf90_def_dim(ncid,'Time',1,nt_id))
+   call
+ncerr(subr,nf90_def_var(ncid,trim(varname),ncfloat,(/nlon_id,nlat_id,nlev_id,nt_id/),fld_id))
+   call ncerr(subr,nf90_put_att(ncid,fld_id,'_FillValue',msvalr))
+   call ncerr(subr,nf90_enddef(ncid))
+end if
 
-! if (fld%lbc) then
-!   do jf=1,4
-!     read(iunit,fmt1) fld%xbound(jf)
-!   enddo
-!   do jf=1,4
-!     read(iunit,fmtn) (fld%qbound(jx,jf), jx=1,fld%nx)
-!   enddo
-! endif
 
-  close(iunit)
-endif
 
-call check(fld)
-
-return
-end subroutine read_file_qg
-
+end subroutine write_file
 ! ------------------------------------------------------------------------------
 
-subroutine write_file(fld, c_conf, vdate)
+subroutine write_file_qg(fld, c_conf, vdate)
 use iso_c_binding
 use datetime_mod
 use fckit_log_module, only : log
@@ -749,7 +704,7 @@ enddo
 close(iunit)
 
 return
-end subroutine write_file
+end subroutine write_file_qg
 
 ! ------------------------------------------------------------------------------
 
