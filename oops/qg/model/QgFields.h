@@ -53,6 +53,7 @@ class QgFields : public util::Printable,
 
   void zero();
   void zero(const util::DateTime &);
+  void dirac(const eckit::Configuration &);
   QgFields & operator=(const QgFields &);
   QgFields & operator+=(const QgFields &);
   QgFields & operator-=(const QgFields &);

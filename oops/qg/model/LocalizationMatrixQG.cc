@@ -11,17 +11,17 @@
 #include "model/LocalizationMatrixQG.h"
 
 #include "model/QgFortran.h"
-#include "model/QgGeometry.h"
+#include "model/QgState.h"
 #include "model/QgIncrement.h"
 #include "eckit/config/Configuration.h"
 
 // -----------------------------------------------------------------------------
 namespace qg {
 // -----------------------------------------------------------------------------
-LocalizationMatrixQG::LocalizationMatrixQG(const QgGeometry & resol,
+LocalizationMatrixQG::LocalizationMatrixQG(const QgState & state,
                                            const eckit::Configuration & config) {
   const eckit::Configuration * configc = &config;
-  qg_localization_setup_f90(keyFtnConfig_, &configc, resol.toFortran());
+  qg_localization_setup_f90(keyFtnConfig_, &configc, state.geometry()->toFortran());
 }
 // -----------------------------------------------------------------------------
 LocalizationMatrixQG::~LocalizationMatrixQG() {

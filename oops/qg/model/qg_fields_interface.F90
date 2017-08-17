@@ -67,6 +67,21 @@ end subroutine qg_field_zero_c
 
 ! ------------------------------------------------------------------------------
 
+subroutine qg_field_dirac_c(c_key_self,c_conf) bind(c,name='qg_field_dirac_f90')
+use iso_c_binding
+use qg_fields
+implicit none
+integer(c_int), intent(in) :: c_key_self
+type(c_ptr), intent(in)    :: c_conf !< Configuration
+type(qg_field), pointer :: self
+
+call qg_field_registry%get(c_key_self,self)
+call dirac(self,c_conf)
+
+end subroutine qg_field_dirac_c
+
+! ------------------------------------------------------------------------------
+
 subroutine qg_field_random_c(c_key_self) bind(c,name='qg_field_random_f90')
 use iso_c_binding
 use qg_fields
@@ -453,8 +468,8 @@ type(qg_field), pointer :: fld
 
 call qg_field_registry%get(c_key_fld,fld)
 
-nx = fld%nx
-ny = fld%ny
+nx = fld%geom%nx
+ny = fld%geom%ny
 nf = fld%nf
 nb =0
 if (fld%lbc) nb = 2
