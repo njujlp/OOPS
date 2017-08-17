@@ -152,8 +152,65 @@ oops/generic/UnstructuredGrid.h
 oops/generic/column_data_mod.F90
 oops/generic/instantiateLocalizationFactory.h
 oops/generic/instantiateObsErrorFactory.h
+oops/generic/nicas_f.h
+oops/generic/nicas_mod.F90
 oops/generic/unstructured_grid_f.h
 oops/generic/unstructured_grid_mod.F90
+
+oops/generic/nicas/model_aro.f90
+oops/generic/nicas/model_aro.f90
+oops/generic/nicas/model_arp.f90
+oops/generic/nicas/model_gem.f90
+oops/generic/nicas/model_geos.f90
+oops/generic/nicas/model_gfs.f90
+oops/generic/nicas/model_ifs.f90
+oops/generic/nicas/model_interface.f90
+oops/generic/nicas/model_mpas.f90
+oops/generic/nicas/model_nemo.f90
+oops/generic/nicas/model_oops.f90
+oops/generic/nicas/model_wrf.f90
+oops/generic/nicas/module_apply_com.f90
+oops/generic/nicas/module_apply_convol.f90
+oops/generic/nicas/module_apply_interp.f90
+oops/generic/nicas/module_apply_nicas.f90
+oops/generic/nicas/module_apply_nicas_sqrt.f90
+oops/generic/nicas/module_mpi.f90
+oops/generic/nicas/module_namelist.f90
+oops/generic/nicas/module_normalization.f90
+oops/generic/nicas/module_nicas.f90
+oops/generic/nicas/module_parameters_convol.f90
+oops/generic/nicas/module_parameters.f90
+oops/generic/nicas/module_parameters_interp.f90
+oops/generic/nicas/module_test.f90
+oops/generic/nicas/tools_const.f90
+oops/generic/nicas/tools_dirac.f90
+oops/generic/nicas/tools_display.f90
+oops/generic/nicas/tools_kinds.f90
+oops/generic/nicas/tools_missing.f90
+oops/generic/nicas/tools_nc.f90
+oops/generic/nicas/type_com.f90
+oops/generic/nicas/type_ctree_api.cpp
+oops/generic/nicas/type_ctree.cpp
+oops/generic/nicas/type_ctree.f90
+oops/generic/nicas/type_ctree.h
+oops/generic/nicas/type_ctree.hpp
+oops/generic/nicas/type_fields.f90
+oops/generic/nicas/type_linop.f90
+oops/generic/nicas/type_mesh.f90
+oops/generic/nicas/type_mpl.f90
+oops/generic/nicas/type_ndata.f90
+oops/generic/nicas/type_randgen_api.cpp
+oops/generic/nicas/type_randgen.cpp
+oops/generic/nicas/type_randgen.f90
+oops/generic/nicas/type_randgen.h
+oops/generic/nicas/type_randgen.hpp
+oops/generic/nicas/type_timer.f90
+oops/generic/nicas/external/Cover_Tree.h
+oops/generic/nicas/external/Cover_Tree_Point.cpp
+oops/generic/nicas/external/Cover_Tree_Point.h
+oops/generic/nicas/external/fgetpid.c
+oops/generic/nicas/external/qsort.f90
+oops/generic/nicas/external/stripack.f90
 
 oops/interface/ErrorCovariance.h
 oops/interface/Geometry.h
@@ -180,6 +237,7 @@ oops/interface/State.h
 oops/interface/Variables.h
 
 oops/runs/Application.h
+oops/runs/Dirac.h
 oops/runs/EnsForecasts.h
 oops/runs/ExternalDFI.h
 oops/runs/Forecast.h
@@ -230,7 +288,7 @@ ecbuild_add_library( TARGET     oops
                      SOURCES    
                                 ${FORTRAN_BINDINGS}
                                 ${oops_src_files}
-                     LIBS       ${LIBXML2_LIBRARIES} ${LAPACK_LIBRARIES} fckit eckit_mpi eckit
+                     LIBS       ${LIBXML2_LIBRARIES} ${LAPACK_LIBRARIES} ${NETCDF_LIBRARIES} fckit eckit_mpi eckit
                      INSTALL_HEADERS LISTED
                      LINKER_LANGUAGE ${OOPS_LINKER_LANGUAGE}
                    )
@@ -258,4 +316,3 @@ add_fctest( TARGET  test_util_duration_intfb.x
             CONDITION HAVE_FCTEST
             LIBS    oops )
 endif()
-

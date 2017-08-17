@@ -10,6 +10,7 @@
 
 #include <boost/noncopyable.hpp>
 
+#include "eckit/config/Configuration.h"
 #include "util/ObjectCounter.h"
 #include "util/Printable.h"
 
@@ -26,12 +27,18 @@ class UnstructuredGrid : public util::Printable,
   UnstructuredGrid();
   ~UnstructuredGrid();
 
+// Get local geometry
+  std::vector<double> getLats();
+  std::vector<double> getLons();
+  std::vector<double> getLevs();
+  std::vector<int> getCmask(const int &);
+
 // Will be useful for tests
   void zero();
   void random();
   double dot_product_with(const UnstructuredGrid &) const;
-// Will be useful for tests
 
+// Will be useful for tests
   int & toFortran() {return keyUGrid_;}
   const int & toFortran() const {return keyUGrid_;}
 
