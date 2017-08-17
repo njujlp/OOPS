@@ -16,7 +16,6 @@ public :: fv3gfs_vars_registry
 type :: fv3gfs_vars
   integer :: nv
   character(len=1), allocatable :: fldnames(:) !< Variable identifiers
-  logical :: lbc
 end type fv3gfs_vars
 
 #define LISTED_TYPE fv3gfs_vars
@@ -42,12 +41,6 @@ character(len=1), intent(in) :: cvars(:)
 integer :: jj
 
 self%nv = size(cvars)
-self%lbc = .false.
-
-do jj=1,self%nv
-  if (cvars(jj)/="x" .and. cvars(jj)/="q" .and. cvars(jj)/="u" .and. cvars(jj)/="v") &
-     & call abor1_ftn ("fv3gfs_vars_setup: unknown field")
-enddo
 allocate(self%fldnames(self%nv))
 self%fldnames(:)=cvars(:)
 
@@ -67,36 +60,7 @@ call fv3gfs_vars_registry%init()
 call fv3gfs_vars_registry%add(c_key_self)
 call fv3gfs_vars_registry%get(c_key_self, self)
 
-svar = config_get_string(c_conf,len(svar),"variables")
-select case (svar)
-case ("nl")
-  self%nv = 4
-  self%lbc = .true.
-  allocate(self%fldnames(4))
-  self%fldnames(:) = (/"x","q","u","v"/)
-case ("tl")
-  self%nv = 4
-  self%lbc = .false.
-  allocate(self%fldnames(4))
-  self%fldnames(:) = (/"x","q","u","v"/)
-case ("cv")
-  self%nv = 1
-  self%lbc = .true.
-  allocate(self%fldnames(1))
-  self%fldnames(1) = "x"
-case ("ci")
-  self%nv = 1
-  self%lbc = .false.
-  allocate(self%fldnames(1))
-  self%fldnames(1) = "x"
-case ("x")
-  self%nv = 1
-  self%lbc = .false.
-  allocate(self%fldnames(1))
-  self%fldnames(1) = "x"
-case default
-  call abor1_ftn("c_fv3gfs_vars_create: undefined variables")
-end select
+self%nv = 0
 
 return
 end subroutine c_fv3gfs_vars_create
@@ -126,10 +90,6 @@ type(fv3gfs_vars), intent(in)    :: self
 type(fv3gfs_vars), intent(inout) :: other
 
 other%nv = self%nv
-other%lbc = self%lbc
-
-allocate(other%fldnames(other%nv))
-other%fldnames(:)=self%fldnames(:)
 
 end subroutine fv3gfs_vars_clone
 
@@ -139,8 +99,8 @@ subroutine c_fv3gfs_vars_delete(c_key_self) bind(c,name='fv3gfs_var_delete_f90')
 
 implicit none
 integer(c_int), intent(inout) :: c_key_self
-
 type(fv3gfs_vars), pointer :: self
+
 call fv3gfs_vars_registry%get(c_key_self, self)
 deallocate(self%fldnames)
 call fv3gfs_vars_registry%remove(c_key_self)
@@ -160,10 +120,6 @@ type(fv3gfs_vars), pointer :: self
 call fv3gfs_vars_registry%get(c_key_self, self)
 
 c_nv = self%nv
-c_nl = 0
-if (self%lbc) c_nl = 1
-
-!self%fldnames(:)
 
 return
 end subroutine c_fv3gfs_vars_info

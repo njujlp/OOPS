@@ -11,17 +11,9 @@ State.h
 Traits.h
 Variables.cc
 Variables.h
-calc_pv.f90
-laplacian_2d.f90
-pv_operator.f90
-random_vectors_mod.F90
-random_f.h
-random_f.cc
-fv3gfs_constants.f90
 fv3gfs_fields.F90
 fv3gfs_fields_interface.F90
 fv3gfs_geom_mod.F90
-fv3gfs_invent_state.f90
 fv3gfs_vars_mod.F90
 )
 

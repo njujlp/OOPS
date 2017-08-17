@@ -29,9 +29,8 @@ Geometry::~Geometry() {
 // -----------------------------------------------------------------------------
 void Geometry::print(std::ostream & os) const {
   int nx;
-  int ny;
-  fv3gfs_geo_info_f90(keyGeom_, nx, ny);
-  os << "nx = " << nx << ", ny = " << ny;
+  fv3gfs_geo_info_f90(keyGeom_, nx);
+  os << "nx = " << nx;
 }
 // -----------------------------------------------------------------------------
 }  // namespace fv3gfs

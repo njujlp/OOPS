@@ -1,5 +1,5 @@
 
-!> Fortran module handling geometry for the QG model
+!> Fortran module handling geometry for the FV3-GFS model
 
 module fv3gfs_geom_mod
 
@@ -13,10 +13,9 @@ public :: fv3gfs_geom_registry
 
 ! ------------------------------------------------------------------------------
 
-!> Fortran derived type to hold geometry data for the QG model
+!> Fortran derived type to hold geometry data for the FV3-GFS model
 type :: fv3gfs_geom
-  integer :: nx
-  integer :: ny
+  integer :: n
 end type fv3gfs_geom
 
 #define LISTED_TYPE fv3gfs_geom
@@ -46,8 +45,7 @@ call fv3gfs_geom_registry%init()
 call fv3gfs_geom_registry%add(c_key_self)
 call fv3gfs_geom_registry%get(c_key_self,self)
 
-self%nx = config_get_int(c_conf, "nx")
-self%ny = config_get_int(c_conf, "ny")
+self%n = 0
 
 end subroutine c_fv3gfs_geo_setup
 
@@ -63,8 +61,8 @@ type(fv3gfs_geom), pointer :: self, other
 call fv3gfs_geom_registry%add(c_key_other)
 call fv3gfs_geom_registry%get(c_key_other, other)
 call fv3gfs_geom_registry%get(c_key_self , self )
-other%nx = self%nx
-other%ny = self%ny
+
+self%n = other%n
 
 end subroutine c_fv3gfs_geo_clone
 
@@ -75,22 +73,22 @@ subroutine c_fv3gfs_geo_delete(c_key_self) bind(c,name='fv3gfs_geo_delete_f90')
 implicit none
 integer(c_int), intent(inout) :: c_key_self     
 
+call fv3gfs_geom_registry%get(c_key_self , self )
+! deallocate whatever is in self%...
 call fv3gfs_geom_registry%remove(c_key_self)
 
 end subroutine c_fv3gfs_geo_delete
 
 ! ------------------------------------------------------------------------------
 
-subroutine c_fv3gfs_geo_info(c_key_self, c_nx, c_ny) bind(c,name='fv3gfs_geo_info_f90')
+subroutine c_fv3gfs_geo_info(c_key_self, c_n) bind(c,name='fv3gfs_geo_info_f90')
 implicit none
 integer(c_int), intent(in   ) :: c_key_self
-integer(c_int), intent(inout) :: c_nx
-integer(c_int), intent(inout) :: c_ny
+integer(c_int), intent(inout) :: c_n
 type(fv3gfs_geom), pointer :: self
 
 call fv3gfs_geom_registry%get(c_key_self , self )
-c_nx = self%nx
-c_ny = self%ny
+c_n = self%n
 
 end subroutine c_fv3gfs_geo_info
 
