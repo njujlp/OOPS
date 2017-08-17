@@ -21,11 +21,11 @@ module fv3gfs_mod
 
 contains
 
-subroutine setup_geom(domain, gtype, nx, ny, ntiles, layout_in, io_layout_in, halo)
+subroutine setup_geom(self, gtype, nx, ny, ntiles, layout_in, io_layout_in, halo)
 
     implicit none
 
-    type(domain2D),   intent(inout) :: domain
+    type(domain2D),   intent(inout) :: self
     character(len=*), intent(in)    :: gtype
     integer,          intent(in)    :: nx, ny, ntiles
     integer,          intent(in)    :: layout_in(:), io_layout_in(:)
@@ -75,16 +75,16 @@ subroutine setup_geom(domain, gtype, nx, ny, ntiles, layout_in, io_layout_in, ha
 
     num_contact = 0
 
-    call mpp_define_mosaic(global_indices, layout2D, domain, ntiles, num_contact, tile1, tile2, &
+    call mpp_define_mosaic(global_indices, layout2D, self, ntiles, num_contact, tile1, tile2, &
                            istart1, iend1, jstart1, jend1, istart2, iend2, jstart2, jend2,      &
                            pe_start, pe_end, whalo=halo, ehalo=halo, shalo=halo, nhalo=halo,    &
                            name=gtype)
 
     if (io_layout_in(1) /= 1 .or. io_layout_in(2) /= 1) &
-        call mpp_define_io_domain(domain, io_layout_in)
+        call mpp_define_io_domain(self, io_layout_in)
 
-    call mpp_get_compute_domain(domain, isc, iec, jsc, jec)
-    call mpp_get_data_domain(domain, isd, ied, jsd, jed)
+    call mpp_get_compute_domain(self, isc, iec, jsc, jec)
+    call mpp_get_data_domain(self, isd, ied, jsd, jed)
 
 end subroutine setup_geom
 
