@@ -1,0 +1,25 @@
+{
+  "logging": {
+    "categories": "Warning, Error"
+  },
+  "test_framework_runtime_config": "--log_level=test_suite",
+  "Geometry": {
+    "namelistfile":"/glade/p/work/mariusz/fv3_ensemble/input.nml",
+    "gridfile":"/glade/p/work/mariusz/fv3_fix/C192/C192_grid_spec.tile?.nc"
+  },
+  "Variables": {
+    "variables3d": "ucomp,vcomp,temp,sphum",
+    "variables2d": "psfc"
+  },
+  "TestDate": "2009-12-31T00:00:00Z",
+  "State": {
+    "date": "2015-08-10T06:00:00Z",
+    "bckgfile": "/glade/p/work/mariusz/fv3_ensemble/2015081006/OUTPUT_FV3/mem001/20150810060000.fv3_history.tile?.nc",
+    "ihisttime": "7"
+  },
+  "StateTest": {
+    "date": "2015-08-10T06:00:00Z",
+    "bckgfile": "/glade/p/work/mariusz/fv3_ensemble/2015081006/OUTPUT_FV3/mem001/20150810060000.fv3_history.tile?.nc",
+    "ihisttime": "7"
+  }
+}
