@@ -32,7 +32,7 @@ type :: wrf_field
   integer :: ny                     !< Meridional grid dimension
   integer :: nz                     !< Number of levels
   integer :: nf                     !< Number of fields
-! logical :: lbc                    !< North-South boundary is present
+  logical :: lbc                    !< North-South boundary is present
   real(kind=kind_real), pointer :: gfld3d(:,:,:)    !< 3D fields
   real(kind=kind_real), allocatable :: U(:,:,:)         !< x-wind component
   real(kind=kind_real), allocatable :: V(:,:,:)         !< y-wind component
@@ -41,11 +41,10 @@ type :: wrf_field
   real(kind=kind_real), allocatable :: P(:,:,:)         !< perturbation pressure
   real(kind=kind_real), allocatable :: H(:,:,:)         !< perturbation pressure
   character(len=max_string_length), allocatable :: fldnames(:) !< Variable identifiers
-  character(len=max_string_length), allocatable :: filename !< File name
+  character(len=max_string_length) :: filename !< File name
   real(kind=kind_real), pointer :: qbound(:,:)         !< perturbation pressure
   real(kind=kind_real), pointer :: xbound(:)         !< perturbation pressure
   real(kind=kind_real), pointer :: x(:)         !< perturbation pressure
-  logical :: lbc        !< perturbation pressure
 end type wrf_field
 
 #define LISTED_TYPE wrf_field
@@ -70,12 +69,12 @@ type(wrf_field), intent(inout) :: self
 type(wrf_geom),  intent(in)    :: geom
 type(wrf_vars),  intent(in)    :: vars
 
-  call check(self)
-
   self%nx = geom%nlon
   self%ny = geom%nlat
   self%nz = geom%nlev
   self%nf = vars%nv
+
+! write(*,*) 'nlon = ',geom%nlon,' nlat = ',geom%nlat,' nlev = ',geom%nlev,'nvar = ',vars%nv
 
   allocate(self%U(self%nx,self%ny,self%nz))
   allocate(self%V(self%nx,self%ny,self%nz))
@@ -93,6 +92,8 @@ type(wrf_vars),  intent(in)    :: vars
   self%Q = 0.0_kind_real
   self%P = 0.0_kind_real
   self%H = 0.0_kind_real
+
+  call check(self)
 
 return
 end subroutine create
@@ -401,15 +402,17 @@ return
 end subroutine change_resol
 
 ! ------------------------------------------------------------------------------
-subroutine read_file(self, c_conf, vdate)
+subroutine read_file(fld, c_conf, vdate)
 
 implicit none
 
-type(wrf_field), intent(inout) :: self    !< Fields
+type(wrf_field), intent(inout) :: fld    !< Fields
 type(c_ptr), intent(in)       :: c_conf   !< Configuration
 type(datetime), intent(inout) :: vdate    !< DateTime
 
 !type(wrf_geom), pointer :: self
+
+character(len=20) :: sdate, fmtn
 
 integer :: ncid,nlon_id,nlat_id,nlev_id
 integer :: P_id,H_id,U_id,V_id,T_id,QVAPOR_id,PB_id,PH_id,PHB_id
@@ -427,7 +430,7 @@ if (.NOT. config_element_exists(c_conf,"filename")) then
  call abort
 endif
 
- subr = config_get_string(c_conf, len(self%filename), "filename")
+ subr = config_get_string(c_conf, len(fld%filename), "filename")
 
 !> Open file filename
 call ncerr(subr,nf90_open(trim(subr),nf90_nowrite,ncid))
@@ -447,89 +450,150 @@ write (*,*) " south_north = ",south_north
 write (*,*) " bottom_top  = ",bottom_top
 
 !> Define dimensions
-   self%nx = west_east
-   self%ny = south_north
-   self%nz = bottom_top
+   fld%nx = west_east
+   fld%ny = south_north
+   fld%nz = bottom_top
 
-!> Allocate space
-   allocate (self%U(self%nx,self%ny,self%nz))
-   allocate (self%V(self%nx,self%ny,self%nz))
-   allocate (self%Q(self%nx,self%ny,self%nz))
-   allocate (self%T(self%nx,self%ny,self%nz))
-   allocate (self%P(self%nx,self%ny,self%nz))
-   allocate (self%H(self%nx,self%ny,self%nz))
-
-!> Initialize
-   U = 0_kind_real
-   V = 0_kind_real
-   T = 0_kind_real
-   QVAPOR = 0_kind_real
-   P = 0_kind_real
-   H = 0_kind_real
+!> Find the valid date and time
+  sdate = config_get_string(c_conf,len(sdate),"date")
+  WRITE(*,*) 'validity date is: '//sdate
+  call datetime_set(sdate, vdate)
 
 !> Read temperature
 
 allocate (T  (west_east,south_north,bottom_top))
+T = 0_kind_real
+
 call ncerr(subr,nf90_inq_varid(ncid,'T',T_id))
 call ncerr(subr,nf90_get_var(ncid,T_id,T,(/1,1,1/),(/west_east,south_north,bottom_top/)))
+
+!write (*,*) " T    = ",T  (west_east/2,south_north/2,bottom_top/2)
 
 !> Read pressure and pressure perturbation
 
 allocate (PB (west_east,south_north,bottom_top))
+PB = 0_kind_real
 call ncerr(subr,nf90_inq_varid(ncid,'PB',PB_id))
 call ncerr(subr,nf90_get_var(ncid,PB_id,PB,(/1,1,1/),(/west_east,south_north,bottom_top/)))
 
+!write (*,*) " PB   = ",PB  (west_east/2,south_north/2,bottom_top/2)
+
 allocate (P  (west_east,south_north,bottom_top))
+P = 0_kind_real
 call ncerr(subr,nf90_inq_varid(ncid,'P',P_id))
 call ncerr(subr,nf90_get_var(ncid,P_id,P,(/1,1,1/),(/west_east,south_north,bottom_top/)))
+
+!write (*,*) " P    = ",P   (west_east/2,south_north/2,bottom_top/2)
 
 !> Read height and heigh perturbation
 
 allocate (PHB (west_east,south_north,bottom_top))
+PHB = 0_kind_real
+
 call ncerr(subr,nf90_inq_varid(ncid,'PHB',PHB_id))
 call ncerr(subr,nf90_get_var(ncid,PHB_id,PHB,(/1,1,1/),(/west_east,south_north,bottom_top/)))
 
+!write (*,*) " PHB  = ",PHB   (west_east/2,south_north/2,bottom_top/2)
+
 allocate (PH (west_east,south_north,bottom_top))
+PH = 0_kind_real
+
 call ncerr(subr,nf90_inq_varid(ncid,'PH',PH_id))
 call ncerr(subr,nf90_get_var(ncid,PH_id,PH,(/1,1,1/),(/west_east,south_north,bottom_top/)))
+
+!write (*,*) " PH   = ",PH    (west_east/2,south_north/2,bottom_top/2)
 
 !> Read water vapor mixing ratio
 
 allocate (QVAPOR (west_east,south_north,bottom_top))
-call ncerr(subr,nf90_inq_varid(ncid,'QVAPOR',PH_id))
+QVAPOR = 0_kind_real
+
+call ncerr(subr,nf90_inq_varid(ncid,'QVAPOR',QVAPOR_id))
 call ncerr(subr,nf90_get_var(ncid,QVAPOR_id,QVAPOR,(/1,1,1/),(/west_east,south_north,bottom_top/)))
+
+!write (*,*) " QVAP = ",QVAPOR    (west_east/2,south_north/2,bottom_top/2)
+
+!> Read wind x component (beware of the staggering)
+
+allocate (U (west_east+1,south_north,bottom_top))
+U = 0_kind_real
+
+call ncerr(subr,nf90_inq_varid(ncid,'U',U_id))
+call ncerr(subr,nf90_get_var(ncid,U_id,U,(/1,1,1/),(/west_east+1,south_north,bottom_top/)))
+
+!write (*,*) " U = ",U    (west_east/2,south_north/2,bottom_top/2)
+
+!> Read wind y component (beware of the staggering)
+
+allocate (V (west_east,south_north+1,bottom_top))
+V = 0_kind_real
+
+call ncerr(subr,nf90_inq_varid(ncid,'V',V_id))
+call ncerr(subr,nf90_get_var(ncid,V_id,V,(/1,1,1/),(/west_east,south_north+1,bottom_top/)))
+
+!write (*,*) " V = ",V    (west_east/2,south_north/2,bottom_top/2)
 
 !> Initialize fields counter
    nf = 0
 
 !> Load pressure in hPa
-   self%P = (P + PB)*0.01
-   nf = nf + 1
-   self%fldnames(nf) = "P" 
+   P = (P + PB) / 100.
+   fld%P = P
 
-!> Load geopotential height
-   self%H = ( (PH+PHB) / 9.81 ) / 1000.
    nf = nf + 1
-   self%fldnames(nf) = "H" 
+   fld%fldnames(nf) = "P" 
+
+!> Load geopotential height in m
+   H = (PH+PHB) / 9.81
+   fld%H = H
+   nf = nf + 1
+   fld%fldnames(nf) = "H" 
 
 !> Load temperature in kelvin
-   self%T = (T+300.) * ( P/ 1000. )**(287.04/1004.)
-   nf = nf + 1
-   self%fldnames(nf) = "T" 
+   T = (T+300_kind_real) * ( P/ 1000_kind_real)**(287.04_kind_real/1004_kind_real)
+   fld%T = T
 
-!> Load water vapor mixing ratio
-   self%Q = QVAPOR
    nf = nf + 1
-   self%fldnames(nf) = "Q" 
+   fld%fldnames(nf) = "T" 
 
+!> Load water vapor mixing ratio in kg/kg
+   fld%Q = QVAPOR
+
+   nf = nf + 1
+   fld%fldnames(nf) = "Q" 
+
+!> Load wind x component in m/s
+   fld%U = 0_kind_real
+   fld%U = 0.5*(U (1:west_east,  :,:) + &
+                U (2:west_east+1,:,:))
+
+   nf = nf + 1
+   fld%fldnames(nf) = "U" 
+
+!> Load wind y component in m/s
+   fld%V = 0_kind_real
+   fld%V = 0.5*(V (:,1:south_north,  :) + &
+                V (:,2:south_north+1,:))
+
+   nf = nf + 1
+   fld%fldnames(nf) = "V" 
 
 !> Free memory
+  deallocate (U)
+  deallocate (V)
   deallocate (T)
   deallocate (P)
   deallocate (PB)
   deallocate (PH)
   deallocate (PHB)
   deallocate (QVAPOR)
+
+write (*,*) " P = ",fld%P(west_east/2,south_north/2,bottom_top/2)
+write (*,*) " H = ",fld%H(west_east/2,south_north/2,bottom_top/2)
+write (*,*) " T = ",fld%T(west_east/2,south_north/2,bottom_top/2)
+write (*,*) " Q = ",fld%Q(west_east/2,south_north/2,bottom_top/2)
+write (*,*) " U = ",fld%U(west_east/2,south_north/2,bottom_top/2)
+write (*,*) " V = ",fld%V(west_east/2,south_north/2,bottom_top/2)
 
   return
 end subroutine read_file
@@ -698,72 +762,84 @@ integer :: jj,joff
 
 call check(fld)
 
-do jj=1,fld%nf
-  joff=(jj-1)*fld%nz
-  pstat(1,jj)=minval(fld%gfld3d(:,:,joff+1:joff+fld%nz))
-  pstat(2,jj)=maxval(fld%gfld3d(:,:,joff+1:joff+fld%nz))
-  pstat(3,jj)=sqrt(sum(fld%gfld3d(:,:,joff+1:joff+fld%nz)**2) &
-               & /real(fld%nz*fld%nx*fld%ny,kind_real))
-enddo
-jj=jj-1
+!do jj=1,fld%nf
+!  joff=(jj-1)*fld%nz
+!  pstat(1,jj)=minval(fld%gfld3d(:,:,joff+1:joff+fld%nz))
+!  pstat(2,jj)=maxval(fld%gfld3d(:,:,joff+1:joff+fld%nz))
+!  pstat(3,jj)=sqrt(sum(fld%gfld3d(:,:,joff+1:joff+fld%nz)**2) &
+!               & /real(fld%nz*fld%nx*fld%ny,kind_real))
+!enddo
+!jj=jj-1
 
-if (fld%lbc) then
-  jj=jj+1
-  pstat(1,jj)=minval(fld%xbound(:))
-  pstat(2,jj)=maxval(fld%xbound(:))
-  pstat(3,jj)=sqrt(sum(fld%xbound(:)**2)/real(4,kind_real))
+!if (fld%lbc) then
+!  jj=jj+1
+!  pstat(1,jj)=minval(fld%xbound(:))
+!  pstat(2,jj)=maxval(fld%xbound(:))
+!  pstat(3,jj)=sqrt(sum(fld%xbound(:)**2)/real(4,kind_real))
 
-  jj=jj+1
-  pstat(1,jj)=minval(fld%qbound(:,:))
-  pstat(2,jj)=maxval(fld%qbound(:,:))
-  pstat(3,jj)=sqrt(sum(fld%qbound(:,:)**2)/real(4*fld%nx,kind_real))
-endif
+!  jj=jj+1
+!  pstat(1,jj)=minval(fld%qbound(:,:))
+!  pstat(2,jj)=maxval(fld%qbound(:,:))
+!  pstat(3,jj)=sqrt(sum(fld%qbound(:,:)**2)/real(4*fld%nx,kind_real))
+!endif
 
-if (jj /= nf) call abor1_ftn("wrf_fields_gpnorm: error number of fields")
+!if (jj /= nf) call abor1_ftn("wrf_fields_gpnorm: error number of fields")
+
+ pstat = 0
 
 return
 end subroutine gpnorm
 
 ! ------------------------------------------------------------------------------
 
-subroutine fldrms(fld, prms)
+subroutine fldrms (fld1,prms)
 implicit none
-type(wrf_field), intent(in) :: fld
-real(kind=kind_real), intent(out) :: prms
-integer :: jf,jy,jx,ii
+type(wrf_field), intent(in) :: fld1
+real(kind=kind_real), intent(inout) :: prms
 real(kind=kind_real) :: zz
+integer :: jx, jy, jz, ii
 
-call check(fld)
+  prms = 0.0_kind_real
 
-zz = 0.0
+  call check(fld1) 
 
-do jf=1,fld%nz*fld%nf
-  do jy=1,fld%ny
-    do jx=1,fld%nx
-      zz = zz + fld%gfld3d(jx,jy,jf)*fld%gfld3d(jx,jy,jf)
-    enddo
+  zz = 0.0_kind_real
+  ii = 0
+
+  do jy=1,fld1%ny
+     do jx=1,fld1%nx
+        do jz=1,fld1%nz
+!          write(*,*) jx,jy,jz
+!          write(*,*) ' H = ',fld1%H(jx,jy,jz)
+!          write(*,*) ' P = ',fld1%P(jx,jy,jz)
+!          write(*,*) ' U = ',fld1%U(jx,jy,jz)
+!          write(*,*) ' V = ',fld1%V(jx,jy,jz)
+!          write(*,*) ' T = ',fld1%T(jx,jy,jz)
+!          write(*,*) ' Q = ',fld1%Q(jx,jy,jz)
+           zz = zz + fld1%H(jx,jy,jz) * fld1%H(jx,jy,jz)
+           ii = ii + 1
+           zz = zz + fld1%P(jx,jy,jz) * fld1%P(jx,jy,jz)
+           ii = ii + 1
+           zz = zz + fld1%U(jx,jy,jz) * fld1%U(jx,jy,jz)
+           ii = ii + 1
+           zz = zz + fld1%V(jx,jy,jz) * fld1%V(jx,jy,jz)
+           ii = ii + 1
+           zz = zz + fld1%T(jx,jy,jz) * fld1%T(jx,jy,jz)
+           ii = ii + 1
+           zz = zz + fld1%Q(jx,jy,jz) * fld1%Q(jx,jy,jz)
+           ii = ii + 1
+        enddo
+     enddo
   enddo
-enddo
 
-ii = fld%nz*fld%nf*fld%ny*fld%nx
+! write(*,*) ' zz = ',zz,' ii = ',ii
 
-if (fld%lbc) then
-  do jf=1,4
-    zz = zz + fld%xbound(jf)*fld%xbound(jf)
-  enddo
-  ii = ii + 4
-  do jf=1,4
-    do jx=1,fld%nx
-     zz = zz + fld%qbound(jx,jf)*fld%qbound(jx,jf)
-    enddo
-  enddo
-  ii = ii + 4*fld%nx
-endif
+  prms = sqrt(zz/real(ii,kind_real))
 
-prms = sqrt(zz/real(ii,kind_real))
+! write(*,*) ' prms = ',prms
 
+  return
 end subroutine fldrms
-
 ! ------------------------------------------------------------------------------
 
 subroutine lin_weights(kk,delta1,delta2,k1,k2,w1,w2)
@@ -886,19 +962,27 @@ implicit none
 type(wrf_field), intent(in) :: self
 logical :: bad
 
-bad = .not.associated(self%gfld3d)
+bad = .FALSE.
 
-bad = bad .or. (size(self%gfld3d, 1) /= self%nx)
-bad = bad .or. (size(self%gfld3d, 2) /= self%ny)
-bad = bad .or. (size(self%gfld3d, 3) /= self%nz*self%nf)
+!bad = .not.associated(self%gfld3d)
 
-bad = bad .or. .not.associated(self%x)
+!bad = bad .or. (size(self%gfld3d, 1) /= self%nx)
+!bad = bad .or. (size(self%gfld3d, 2) /= self%ny)
+!bad = bad .or. (size(self%gfld3d, 3) /= self%nz*self%nf)
+
+!bad = bad .or. .not.associated(self%x)
 
 if (self%nf>1) then
+  bad = bad .or. .not.allocated(self%p)
+  bad = bad .or. .not.allocated(self%h)
+  bad = bad .or. .not.allocated(self%t)
   bad = bad .or. .not.allocated(self%q)
   bad = bad .or. .not.allocated(self%u)
   bad = bad .or. .not.allocated(self%v)
 else
+  bad = bad .or. allocated(self%p)
+  bad = bad .or. allocated(self%h)
+  bad = bad .or. allocated(self%t)
   bad = bad .or. allocated(self%q)
   bad = bad .or. allocated(self%u)
   bad = bad .or. allocated(self%v)
@@ -906,25 +990,25 @@ endif
 
 !allocate(self%fldnames(self%nf))
 
-if (self%lbc) then
-  bad = bad .or. .not.associated(self%xbound)
-  bad = bad .or. (size(self%xbound) /= 4)
+!if (self%lbc) then
+!  bad = bad .or. .not.associated(self%xbound)
+!  bad = bad .or. (size(self%xbound) /= 4)
 
-  bad = bad .or. .not.associated(self%qbound)
-  bad = bad .or. (size(self%qbound, 1) /= self%nx)
-  bad = bad .or. (size(self%qbound, 2) /= 4)
-else
-  bad = bad .or. associated(self%xbound)
-  bad = bad .or. associated(self%qbound)
-endif
+!  bad = bad .or. .not.associated(self%qbound)
+!  bad = bad .or. (size(self%qbound, 1) /= self%nx)
+!  bad = bad .or. (size(self%qbound, 2) /= 4)
+!else
+!  bad = bad .or. associated(self%xbound)
+!  bad = bad .or. associated(self%qbound)
+!endif
 
-if (bad) then
-  write(0,*)'nx, ny, nf, nl, lbc = ',self%nx,self%ny,self%nf,self%nz,self%lbc
-  if (associated(self%gfld3d)) write(0,*)'shape(gfld3d) = ',shape(self%gfld3d)
-  if (associated(self%xbound)) write(0,*)'shape(xbound) = ',shape(self%xbound)
-  if (associated(self%qbound)) write(0,*)'shape(qbound) = ',shape(self%qbound)
-  call abor1_ftn ("wrf_fields: field not consistent")
-endif
+ if (bad) then
+!  write(0,*)'nx, ny, nf, nl, lbc = ',self%nx,self%ny,self%nf,self%nz,self%lbc
+!  if (associated(self%gfld3d)) write(0,*)'shape(gfld3d) = ',shape(self%gfld3d)
+!  if (associated(self%xbound)) write(0,*)'shape(xbound) = ',shape(self%xbound)
+!  if (associated(self%qbound)) write(0,*)'shape(qbound) = ',shape(self%qbound)
+   call abor1_ftn ("wrf_fields: field not consistent")
+ endif
 
 end subroutine check
 

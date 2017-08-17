@@ -15,6 +15,7 @@ private
 public :: wrf_geom
 public :: wrf_geom_registry
 public :: max_string_length
+public :: c_wrf_geo_setup
 
 ! ------------------------------------------------------------------------------
 

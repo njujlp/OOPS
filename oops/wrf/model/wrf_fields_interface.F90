@@ -17,6 +17,8 @@ type(wrf_field), pointer :: self
 type(wrf_geom),  pointer :: geom
 type(wrf_vars),  pointer :: vars
 
+type(c_ptr) :: c_conf
+
 call wrf_geom_registry%get(c_key_geom, geom)
 call wrf_vars_registry%get(c_key_vars, vars)
 call wrf_field_registry%init()
