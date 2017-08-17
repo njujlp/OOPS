@@ -325,6 +325,19 @@ type(ctreetype) :: ctree
 allocate(ndata%s(ndata%nl1))
 
 do il1=1,ndata%nl1
+   if (ndata%nc2(il1)==ndata%nc1) then
+      ! No interpolation
+      ndata%s(il1)%prefix = 's'
+      ndata%s(il1)%n_src = ndata%nc2(il1)
+      ndata%s(il1)%n_dst = ndata%nc1
+      ndata%s(il1)%n_s = ndata%nc2(il1)
+      call linop_alloc(ndata%s(il1))
+      do i_s=1,ndata%s(il1)%n_s
+         ndata%s(il1)%row(i_s) = i_s
+         ndata%s(il1)%col(i_s) = i_s
+         ndata%s(il1)%S(i_s) = 1.0
+      end do
+   else
    ! Compute interpolation
    call interp_horiz(ndata,ndata%nc2(il1),ndata%lon(ndata%ic2il1_to_ic0(1:ndata%nc2(il1),il1)), & 
  & ndata%lat(ndata%ic2il1_to_ic0(1:ndata%nc2(il1),il1)),ndata%nc1,ndata%lon(ndata%ic1_to_ic0), &
@@ -426,6 +439,7 @@ do il1=1,ndata%nl1
 
    ! Release memory
    deallocate(missing)
+   end if
 end do
 
 end subroutine compute_interp_s
@@ -466,6 +480,7 @@ allocate(mask_ctree(mesh%nnr))
 mask_ctree = 1
 ctree = create_ctree(mesh%nnr,dble(lon_src(mesh%order)),dble(lat_src(mesh%order)),mask_ctree)
 
+print*, 'TUTU',size(mesh%order)
 ! Compute interpolation
 n_s = 0
 do i_dst=1,n_dst
@@ -486,14 +501,16 @@ do i_dst=1,n_dst
          b = b/sum(b)
 
          ! Add interpolation elements
-         do i=1,3
-            if (b(i)>S_inf) then
-               n_s = n_s+1
-               row(n_s) = i_dst
-               col(n_s) = mesh%order(ib(i))
-               S(n_s) = b(i)
-            end if
-         end do
+         if (all(ib>0)) then
+            do i=1,3
+               if (b(i)>S_inf) then
+                  n_s = n_s+1
+                  row(n_s) = i_dst
+                  col(n_s) = mesh%order(ib(i))
+                  S(n_s) = b(i)
+               end if
+            end do
+         end if
       end if
    end if
 end do

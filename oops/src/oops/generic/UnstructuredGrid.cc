@@ -47,7 +47,7 @@ std::vector<int> UnstructuredGrid::getCmask(const int & ilev) {
   int ncols;
   get_ncols_f90(keyUGrid_, ncols);
   std::vector<int> cmask(ncols);
-  get_cmask_f90(keyUGrid_, ncols, ilev, &cmask[0]);
+  get_cmask_f90(keyUGrid_, ncols, ilev+1, &cmask[0]);
   return cmask;
 }
 // -----------------------------------------------------------------------------

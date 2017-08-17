@@ -238,6 +238,17 @@ do is=1,ndata%ns
    rvs(is) = rv2(ndata%is_to_ic1(is),ndata%is_to_il1(is))
 end do
 
+! Print results
+write(mpl%unit,'(a7,a)') '','Global parameters'
+write(mpl%unit,'(a10,a,i8)') '','nc0 =       ',ndata%nc0
+write(mpl%unit,'(a10,a,i8)') '','nl0 =       ',ndata%nl0
+write(mpl%unit,'(a10,a,i8)') '','nc1 =       ',ndata%nc1
+write(mpl%unit,'(a10,a,i8)') '','nl1 =       ',ndata%nl1
+do il1=1,ndata%nl1
+   write(mpl%unit,'(a10,a,i3,a,i8)') '','nc2(',il1,') =   ',ndata%nc2(il1)
+end do
+write(mpl%unit,'(a10,a,i8)') '','ns =        ',ndata%ns
+
 ! Compute horizontal interpolation data
 write(mpl%unit,'(a7,a)') '','Compute horizontal interpolation data'
 call compute_interp_h(ndata)
@@ -259,15 +270,7 @@ else
 end if
 
 ! Print results
-write(mpl%unit,'(a7,a)') '','Global parameters'
-write(mpl%unit,'(a10,a,i8)') '','nc0 =       ',ndata%nc0
-write(mpl%unit,'(a10,a,i8)') '','nl0 =       ',ndata%nl0
-write(mpl%unit,'(a10,a,i8)') '','nc1 =       ',ndata%nc1
-write(mpl%unit,'(a10,a,i8)') '','nl1 =       ',ndata%nl1
-do il1=1,ndata%nl1
-   write(mpl%unit,'(a10,a,i3,a,i8)') '','nc2(',il1,') =   ',ndata%nc2(il1)
-end do
-write(mpl%unit,'(a10,a,i8)') '','ns =        ',ndata%ns
+write(mpl%unit,'(a7,a)') '','Linear operators'
 do il0i=1,ndata%nl0i
    write(mpl%unit,'(a10,a,i3,a,i8)') '','h(',il0i,')%n_s = ',ndata%h(il0i)%n_s
 end do
@@ -301,7 +304,7 @@ type(meshtype) :: mesh
 
 ! Create mesh
 if ((.not.allocated(ndata%area)).or.nam%mask_check.or.nam%network) &
- & call create_mesh(ndata%rng,ndata%nc0,ndata%lon,ndata%lat,.true.,mesh)
+ & call create_mesh(ndata%rng,ndata%nc0,ndata%lon,ndata%lat,.false.,mesh)
 
 if (.not.allocated(ndata%area)) then
    ! Allocation

@@ -182,7 +182,7 @@ icols = 0
 current => self%head
 do while (associated(current))
    icols = icols+1
-   cmask(icols) = current%column%cmask(ilev+1) ! +1 for arrays offset from C++ to Fortran
+   cmask(icols) = current%column%cmask(ilev)
    current => current%next
 end do
 

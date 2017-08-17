@@ -59,10 +59,11 @@ LocalizationNICAS<MODEL>::LocalizationNICAS(const State_ & xx, const eckit::Conf
   std::vector<double> lons = ugrid.getLons();
   std::vector<double> levs = ugrid.getLevs();
   std::vector<int> cmask;
+Log::info() << levs.size() << std::endl;
   for (int jlev = 0; jlev < levs.size(); ++jlev) {
     std::vector<int> tmp = ugrid.getCmask(jlev);
     cmask.insert(cmask.end(), tmp.begin(), tmp.end());
-  }
+  };
   int nh = lats.size();
   int nv = levs.size();
   create_nicas_f90(keyNicas_, &fconf, nh, &lats[0], &lons[0], nv, &levs[0], &cmask[0]);

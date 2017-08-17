@@ -75,6 +75,7 @@ lons(:)=clons(:)
 levs(:)=clevs(:)
 cmask(:)=ccmask(:)
 
+print*, 'TOTO',cnv
 call create_nicas(self, c_conf, lats, lons, levs, cmask)
 end subroutine create_nicas_c
 
@@ -114,6 +115,8 @@ real(kind=kind_real), intent(in) :: lats(:), lons(:), levs(:)
 integer, intent(in) :: mask(:)
 integer :: nc0,nlev
 character(len=4) :: myprocchar,nprocchar,nthreadchar
+
+print*, 'TATA', size(levs)
 
 ! NICAS setup
 call log%info("NICAS setup")
