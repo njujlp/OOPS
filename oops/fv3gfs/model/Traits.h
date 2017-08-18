@@ -10,6 +10,7 @@
 
 #include <string>
 
+#include "model/ErrorCovariance.h"
 #include "model/Geometry.h"
 #include "model/Increment.h"
 #include "model/State.h"
@@ -19,11 +20,13 @@ namespace fv3gfs {
 
 struct Traits {
   static std::string name() {return "FV3GFS";}
+  static std::string nameCovar() {return "FV3Error";}
 
   typedef fv3gfs::Geometry            Geometry;
   typedef fv3gfs::Variables           Variables;
   typedef fv3gfs::State               State;
   typedef fv3gfs::Increment           Increment;
+  typedef fv3gfs::ErrorCovariance     Covariance;
 };
 
 }  // namespace fv3gfs

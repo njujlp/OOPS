@@ -1,4 +1,5 @@
 list( APPEND oops_fv3gfs_src_files
+ErrorCovariance.h
 Fields.cc
 Fields.h
 Fortran.h
@@ -16,10 +17,6 @@ fv3gfs_fields_interface.F90
 fv3gfs_geom_mod.F90
 fv3gfs_vars_mod.F90
 )
-
-if ( CMAKE_Fortran_COMPILER_ID MATCHES "Cray" )
-  set( cfdealloc C_F_NO_DEALLOC )
-endif()
 
 ecbuild_add_library( TARGET   fv3gfs
                      DEFINITIONS ${cfdealloc}
