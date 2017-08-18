@@ -15,7 +15,6 @@ fv3gfs_fields.F90
 fv3gfs_fields_interface.F90
 fv3gfs_geom_mod.F90
 fv3gfs_vars_mod.F90
-module_fv3gfs.f90
 )
 
 if ( CMAKE_Fortran_COMPILER_ID MATCHES "Cray" )
