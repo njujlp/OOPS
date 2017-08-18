@@ -61,6 +61,7 @@ class Increment : public oops::GeneralizedDepartures,
   void diff(const State &, const State &);
   void zero();
   void zero(const util::DateTime &);
+  void dirac(const eckit::Configuration &);
   Increment & operator =(const Increment &);
   Increment & operator+=(const Increment &);
   Increment & operator-=(const Increment &);

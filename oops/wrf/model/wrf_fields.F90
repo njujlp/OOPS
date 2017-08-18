@@ -21,13 +21,15 @@ public :: wrf_field, &
         & self_add, self_schur, self_sub, self_mul, axpy, &
         & dot_prod, add_incr, diff_incr, &
         & read_file, write_file, gpnorm, fldrms, &
-        & change_resol
+        & change_resol, &
+        & convert_from_ug, convert_to_ug, dirac
 public :: wrf_field_registry
 
 ! ------------------------------------------------------------------------------
 
 !> Fortran derived type to hold QG fields
 type :: wrf_field
+  type(wrf_geom), pointer :: geom                    !< Geometry
   integer :: nx                     !< Zonal grid dimension
   integer :: ny                     !< Meridional grid dimension
   integer :: nz                     !< Number of levels
@@ -66,9 +68,10 @@ contains
 subroutine create(self, geom, vars)
 implicit none
 type(wrf_field), intent(inout) :: self
-type(wrf_geom),  intent(in)    :: geom
+type(wrf_geom),  pointer, intent(in)    :: geom
 type(wrf_vars),  intent(in)    :: vars
 
+  self%geom => geom
   self%nx = geom%nlon
   self%ny = geom%nlat
   self%nz = geom%nlev
@@ -611,101 +614,132 @@ type(datetime), intent(inout) :: vdate    !< DateTime
 
 character(len=20) :: sdate, fmtn
 
-integer :: ncid,nlon_id,nlat_id,nlev_id
-integer :: P_id,H_id,U_id,V_id,T_id,QVAPOR_id,PB_id,PH_id,PHB_id
+integer :: ncid,nlon_id,nlat_id,nlev_id,ntime_id
+integer :: P_id,H_id,U_id,V_id,T_id,Q_id
+integer :: QVAPOR_id,PB_id,PH_id,PHB_id
 integer :: west_east, south_north,bottom_top
-character (len=max_string_length) :: subr
+integer :: iret
+character (len=max_string_length) :: subr = "write_fields"
 character (len=max_string_length) :: filename
 
-    call check(fld)
+   call check(fld)
 
-    filename = config_get_string(c_conf, len(filename), "filename")
-    varname = config_get_string(c_conf, len(varname), "varname")
+   filename = config_get_string(c_conf, len(filename), "fileout")
 
+!> open file
+   WRITE (*, '(2A)') "Open NETCDF file: ",TRIM (filename)
+   iret = nf90_create(TRIM(filename), nf90_CLOBBER, ncid)
+   CALL check_err (iret, subr)
 
-! Define dimensions and variable if necessary
-if (ierr/=nf90_noerr) then
-   call ncerr(subr,nf90_redef(ncid))
-   ierr = nf90_inq_dimid(ncid,'west_east',nlon_id)
-   if (ierr/=nf90_noerr) call ncerr(subr,nf90_def_dim(ncid,'west_east',sdata%nlon,nlon_id))
-   ierr = nf90_inq_dimid(ncid,'south_north',nlat_id)
-   if (ierr/=nf90_noerr) call
-ncerr(subr,nf90_def_dim(ncid,'south_north',sdata%nlat,nlat_id))
-   ierr = nf90_inq_dimid(ncid,'bottom_top',nlev_id)
-   if (ierr/=nf90_noerr) call
-ncerr(subr,nf90_def_dim(ncid,'bottom_top',sdata%nl0,nlev_id))
-   ierr = nf90_inq_dimid(ncid,'Time',nt_id)
-   if (ierr/=nf90_noerr) call ncerr(subr,nf90_def_dim(ncid,'Time',1,nt_id))
-   call
-ncerr(subr,nf90_def_var(ncid,trim(varname),ncfloat,(/nlon_id,nlat_id,nlev_id,nt_id/),fld_id))
-   call ncerr(subr,nf90_put_att(ncid,fld_id,'_FillValue',msvalr))
-   call ncerr(subr,nf90_enddef(ncid))
-end if
+!> define dimesions
 
+   WRITE (*, '(A)') 'Define NETCDF dimensions:'
 
+!  iret = nf90_def_dim(ncid, 'time', nf90_UNLIMITED, ntime_id)
+!  CALL check_err (iret, subr)
 
+   iret = nf90_def_dim(ncid, 'south_east',fld%nx, nlon_id)
+   CALL check_err (iret, subr)
+
+   iret = nf90_def_dim(ncid, 'south_north',fld%ny, nlat_id)
+   CALL check_err (iret, subr)
+
+   iret = nf90_def_dim(ncid, 'bottom_top', fld%nz, nlev_id)
+   CALL check_err (iret, subr)
+
+!> Assign global attributes
+
+!  WRITE (*,'(A)') 'Define global attributes:'
+!  iret = nf90_put_att (ncid, nf90_GLOBAL, 'DX', geom%DX)
+!  CALL check_err (iret, subr)
+
+!  iret = nf90_put_att (ncid, nf90_GLOBAL, 'DY', geo%DY)
+!  CALL check_err (iret, subr)
+
+!> Assign variables ids
+
+   WRITE (*, '(A)') 'Assign variable ids:'
+
+   iret = nf90_def_var (ncid, "P", nf90_double, &
+         (/nlon_id,nlat_id,nlev_id/),P_id)
+
+   CALL check_err (iret, subr)
+!  CALL std_put_att(ncid, P_id, "Full pressure", "hPa")
+   
+   iret = nf90_def_var (ncid, "H", nf90_double, &
+         (/nlon_id,nlat_id,nlev_id/),H_id)
+   CALL check_err (iret, subr)
+!  CALL std_put_att(ncid, P_id, "Geopotential height", "m")
+
+   iret = nf90_def_var (ncid, "T", nf90_double, &
+         (/nlon_id,nlat_id,nlev_id/),T_id)
+   CALL check_err (iret, subr)
+!  CALL std_put_att(ncid, P_id, "Temperature", "K")
+
+   iret = nf90_def_var (ncid, "Q", nf90_double, &
+         (/nlon_id,nlat_id,nlev_id/),Q_id)
+   CALL check_err (iret, subr)
+!  CALL std_put_att(ncid, P_id, "Water vapor mixing ratio", "kg/kg")
+
+   iret = nf90_def_var (ncid, "U", nf90_double, &
+         (/nlon_id,nlat_id,nlev_id/),U_id)
+   CALL check_err (iret, subr)
+!  CALL std_put_att(ncid, P_id, "X-wind components", "m/s")
+
+   iret = nf90_def_var (ncid, "V", nf90_double, &
+         (/nlon_id,nlat_id,nlev_id/),V_id)
+   CALL check_err (iret, subr)
+!  CALL std_put_att(ncid, P_id, "Y-wind components", "m/s")
+   
+   iret = nf90_enddef(ncid)
+   CALL check_err (iret, subr)
+
+!> Put the variables in the file
+
+   WRITE (*, '(A)') 'Put variables:'
+
+   WRITE (*, '(A)') 'Put variable: P'
+   iret = nf90_put_var (ncid, P_id,fld%P)
+
+   CALL check_err (iret, subr)
+
+   WRITE (*, '(A)') 'Put variable: H'
+   iret = nf90_put_var (ncid, H_id,fld%H)
+   CALL check_err (iret, subr)
+
+   iret = nf90_put_var (ncid, T_id, fld%T)
+   CALL check_err (iret, subr)
+
+   iret = nf90_put_var (ncid, Q_id, fld%Q)
+   CALL check_err (iret, subr)
+
+   iret = nf90_put_var (ncid, U_id, fld%U)
+   CALL check_err (iret, subr)
+
+   iret = nf90_put_var (ncid, V_id, fld%V)
+   CALL check_err (iret, subr)
+
+!> Close file
+
+   iret = nf90_close(ncid)
+   CALL check_err (iret, subr)
+ 
+   return
 end subroutine write_file
+
 ! ------------------------------------------------------------------------------
+subroutine check_err (iret,subr)
 
-subroutine write_file_qg(fld, c_conf, vdate)
-use iso_c_binding
-use datetime_mod
-use fckit_log_module, only : log
+  integer :: iret
+  character (len=max_string_length) :: subr
 
-implicit none
-type(wrf_field), intent(in) :: fld    !< Fields
-type(c_ptr), intent(in)    :: c_conf !< Configuration
-type(datetime), intent(in) :: vdate  !< DateTime
+  IF (iret .NE. nf90_NOERR) then
+     WRITE (*,'(2A)') "ERROR in routine ",TRIM(subr)
+     WRITE (*,'(2A)') "ERROR code: ",nf90_strerror(iret)
+     CALL ABORT
+  ENDIF
 
-integer, parameter :: iunit=11
-integer, parameter :: max_string_length=800 ! Yuk!
-character(len=max_string_length+50) :: record
-character(len=max_string_length) :: filename
-character(len=20) :: sdate, fmtn
-character(len=4)  :: cnx
-character(len=11) :: fmt1='(X,ES24.16)'
-character(len=1024):: buf
-integer :: jf, jy, jx, is
-
-call check(fld)
-
-filename = genfilename(c_conf,max_string_length,vdate)
-WRITE(buf,*) 'wrf_field:write_file: writing '//filename
-call log%info(buf)
-open(unit=iunit, file=trim(filename), form='formatted', action='write')
-
-is=0
-if (fld%lbc) is=1
-
-write(iunit,*) fld%nx, fld%ny, fld%nz, fld%nf, is
-
-call datetime_to_string(vdate, sdate)
-write(iunit,*) sdate
-
-if (fld%nx>9999)  call abor1_ftn("Format too small")
-write(cnx,'(I4)')fld%nx
-fmtn='('//trim(cnx)//fmt1//')'
-
-do jf=1,fld%nz*fld%nf
-  do jy=1,fld%ny
-    write(iunit,fmtn) (fld%gfld3d(jx,jy,jf), jx=1,fld%nx)
-  enddo
-enddo
-
-!if (fld%lbc) then
-!  do jf=1,4
-!    write(iunit,fmt1) fld%xbound(jf)
-!  enddo
-!  do jf=1,4
-!    write(iunit,fmtn) (fld%qbound(jx,jf), jx=1,fld%nx)
-!  enddo
-!endif
-
-close(iunit)
-
-return
-end subroutine write_file_qg
-
+end subroutine check_err
 ! ------------------------------------------------------------------------------
 
 subroutine gpnorm(fld, nf, pstat)
@@ -795,83 +829,6 @@ integer :: jx, jy, jz, ii
 
   return
 end subroutine fldrms
-! ------------------------------------------------------------------------------
-
-subroutine lin_weights(kk,delta1,delta2,k1,k2,w1,w2)
-implicit none
-integer, intent(in)  :: kk
-real(kind=kind_real), intent(in)     :: delta1,delta2
-integer, intent(out) :: k1,k2
-real(kind=kind_real), intent(out)    :: w1,w2
-
-integer :: ii
-real(kind=kind_real) :: zz
-
-zz=real(kk-1,kind_real)*delta1
-zz=zz/delta2
-ii=int(zz)
-w1=zz-real(ii,kind_real)
-w2=1.0_kind_real-w1
-k1=ii+1
-k2=ii+2
-
-return
-end subroutine lin_weights
-
-! ------------------------------------------------------------------------------
-
-function genfilename (c_conf,length,vdate)
-use iso_c_binding
-use datetime_mod
-use duration_mod
-type(c_ptr), intent(in)    :: c_conf  !< Configuration
-integer, intent(in) :: length
-character(len=length) :: genfilename
-type(datetime), intent(in) :: vdate
-
-character(len=length) :: fdbdir, expver, typ, validitydate, referencedate, sstep, &
-                       & prefix, mmb
-type(datetime) :: rdate
-type(duration) :: step
-integer lenfn
-
-! here we should query the length and then allocate "string".
-! But Fortran 90 does not allow variable-length allocatable strings.
-! config_get_string checks the string length and aborts if too short.
-fdbdir = config_get_string(c_conf,len(fdbdir),"datadir")
-expver = config_get_string(c_conf,len(expver),"exp")
-typ    = config_get_string(c_conf,len(typ)   ,"type")
-
-if (typ=="ens") then
-  mmb = config_get_string(c_conf, len(mmb), "member")
-  lenfn = LEN_TRIM(fdbdir) + 1 + LEN_TRIM(expver) + 1 + LEN_TRIM(typ) + 1 + LEN_TRIM(mmb)
-  prefix = TRIM(fdbdir) // "/" // TRIM(expver) // "." // TRIM(typ) // "." // TRIM(mmb)
-else
-  lenfn = LEN_TRIM(fdbdir) + 1 + LEN_TRIM(expver) + 1 + LEN_TRIM(typ)
-  prefix = TRIM(fdbdir) // "/" // TRIM(expver) // "." // TRIM(typ)
-endif
-
-if (typ=="fc" .or. typ=="ens") then
-  referencedate = config_get_string(c_conf,len(referencedate),"date")
-  call datetime_to_string(vdate, validitydate)
-  call datetime_create(TRIM(referencedate), rdate)
-  call datetime_diff(vdate, rdate, step)
-  call duration_to_string(step, sstep)
-  lenfn = lenfn + 1 + LEN_TRIM(referencedate) + 1 + LEN_TRIM(sstep)
-  genfilename = TRIM(prefix) // "." // TRIM(referencedate) // "." // TRIM(sstep)
-endif
-
-if (typ=="an") then
-  call datetime_to_string(vdate, validitydate)
-  lenfn = lenfn + 1 + LEN_TRIM(validitydate)
-  genfilename = TRIM(prefix) // "." // TRIM(validitydate)
-endif
-
-if (lenfn>length) &
-  & call abor1_ftn("wrf_fields:genfilename: filename too long")
-
-end function genfilename
-
 ! ------------------------------------------------------------------------------
 
 function common_vars(x1, x2)
@@ -966,6 +923,111 @@ endif
  endif
 
 end subroutine check
+! ------------------------------------------------------------------------------
+
+subroutine dirac(self, c_conf)
+
+use iso_c_binding
+implicit none
+type(wrf_field), intent(inout) :: self
+type(c_ptr), intent(in)       :: c_conf   !< Configuration
+integer :: ndir,idir,ildir,ifdir,ioff
+integer,allocatable :: ixdir(:),iydir(:)
+character(len=3) :: idirchar
+
+call check(self)
+
+! Get Diracs positions
+ndir = config_get_int(c_conf,"ndir")
+allocate(ixdir(ndir))
+allocate(iydir(ndir))
+
+do idir=1,ndir
+   write(idirchar,'(i3)') idir
+   ixdir(idir) = config_get_int(c_conf,"ixdir("//trim(adjustl(idirchar))//")")
+   iydir(idir) = config_get_int(c_conf,"iydir("//trim(adjustl(idirchar))//")")
+end do
+ildir = config_get_int(c_conf,"ildir")
+ifdir = config_get_int(c_conf,"ifdir")
+
+! Check
+if (ndir<1) call abor1_ftn("wrf_fields:dirac non-positive ndir")
+if (any(ixdir<1).or.any(ixdir>self%nx)) call abor1_ftn("wrf_fields:dirac invalid ixdir")
+if (any(iydir<1).or.any(iydir>self%ny)) call abor1_ftn("wrf_fields:dirac invalid iydir")
+if ((ildir<1).or.(ildir>self%nz)) call abor1_ftn("wrf_fields:dirac invalid ildir")
+if ((ifdir<1).or.(ifdir>self%nf)) call abor1_ftn("wrf_fields:dirac invalid ifdir")
+
+! Setup Diracs
+call zeros(self)
+ioff = (ifdir-1)*self%nz
+do idir=1,ndir
+   self%T(ixdir(idir),iydir(idir),ioff+ildir) = 1.0
+ end do
+
+end subroutine dirac
+
+! ------------------------------------------------------------------------------
+
+subroutine convert_to_ug(self, ug)
+
+use unstructured_grid_mod
+implicit none
+type(wrf_field), intent(in) :: self
+type(unstructured_grid), intent(inout) :: ug
+real(kind=kind_real) :: zz(self%nz)
+integer :: jx,jy,jl,jf,joff,j
+integer :: cmask(self%nz)
+
+do jl=1,self%nz
+  zz(jl) = real(jl,kind=kind_real)
+enddo
+
+call create_unstructured_grid(ug, self%nz, zz)
+
+cmask = 1
+do jy=1,self%ny
+  do jx=1,self%nx
+    call add_column(ug, self%geom%lat(jx,jy), self%geom%lon(jx,jy), self%nz, self%nf, 0, cmask, 1)
+    j = 0
+    do jf=1,self%nf
+      joff = (jf-1)*self%nz
+      do jl=1,self%nz
+         j = j+1
+         ug%last%column%cols(j) = self%gfld3d(jx,jy,joff+jl)
+      enddo
+    enddo
+  enddo
+enddo
+
+end subroutine convert_to_ug
+
+! ------------------------------------------------------------------------------
+
+subroutine convert_from_ug(self, ug)
+
+use unstructured_grid_mod
+implicit none
+type(wrf_field), intent(inout) :: self
+type(unstructured_grid), intent(in) :: ug
+type(column_element), pointer :: current
+integer :: jx,jy,jl,jf,joff,j
+
+current => ug%head
+do jy=1,self%ny
+  do jx=1,self%nx
+    j = 0
+    do jf=1,self%nf
+      joff = (jf-1)*self%nz
+      do jl=1,self%nz
+         j = j+1
+         self%gfld3d(jx,jy,joff+jl) = current%column%cols(j)
+      enddo
+    enddo
+    current => current%next
+  enddo
+enddo
+
+end subroutine convert_from_ug
 
 ! ------------------------------------------------------------------------------
 

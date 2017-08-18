@@ -167,5 +167,8 @@ void Increment::print(std::ostream & os) const {
   os << *fields_;
 }
 // -----------------------------------------------------------------------------
-
+void Increment::dirac(const eckit::Configuration & config) {
+  fields_->dirac(config);
+}
+// -----------------------------------------------------------------------------
 }  // namespace wrf

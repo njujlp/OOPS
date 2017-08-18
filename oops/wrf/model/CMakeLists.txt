@@ -1,4 +1,5 @@
 list( APPEND oops_wrf_src_files
+ErrorCovariance.h
 Fields.cc
 Fields.h
 Fortran.h

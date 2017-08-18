@@ -14,6 +14,7 @@
 #include "model/Increment.h"
 #include "model/State.h"
 #include "model/Variables.h"
+#include "model/ErrorCovariance.h"
 
 namespace wrf {
 
@@ -24,6 +25,8 @@ struct Traits {
   typedef wrf::Variables           Variables;
   typedef wrf::State               State;
   typedef wrf::Increment           Increment;
+  static std::string nameCovar() {return "WRFError";}
+  typedef wrf::ErrorCovariance     Covariance;
 };
 
 }  // namespace wrf

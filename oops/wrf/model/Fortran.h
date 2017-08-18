@@ -43,6 +43,7 @@ extern "C" {
 
   void wrf_field_copy_f90(const int & keyFlds, const int & keyFldsOther);
   void wrf_field_zero_f90(const int & keyFlds);
+  void wrf_field_dirac_f90(const int & keyFlds, const eckit::Configuration * const *);
   void wrf_field_self_add_f90(const int & keyFlds, const int & keyFldsOther);
   void wrf_field_self_sub_f90(const int & keyFlds, const int & keyFldsOther);
   void wrf_field_self_mul_f90(const int & keyFlds, const double &);
@@ -61,6 +62,8 @@ extern "C" {
                               util::DateTime * const *);
   void wrf_field_write_file_f90(const int & keyFlds, const eckit::Configuration * const *,
                                const util::DateTime * const *);
+  void wrf_field_convert_to_f90(const int &, const int &);
+  void wrf_field_convert_from_f90(const int &, const int &);
 
   void wrf_field_gpnorm_f90(const int & keyFlds, const int &, double &);
   void wrf_field_sizes_f90(const int & keyFlds, int &, int &, int &, int &);

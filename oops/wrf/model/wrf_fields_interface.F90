@@ -62,6 +62,57 @@ end subroutine wrf_field_zero_c
 
 ! ------------------------------------------------------------------------------
 
+subroutine wrf_field_dirac_c(c_key_self,c_conf) bind(c,name='wrf_field_dirac_f90')
+use iso_c_binding
+use wrf_fields
+implicit none
+integer(c_int), intent(in) :: c_key_self
+type(c_ptr), intent(in)    :: c_conf !< Configuration
+type(wrf_field), pointer :: self
+
+call wrf_field_registry%get(c_key_self,self)
+call dirac(self,c_conf)
+
+end subroutine wrf_field_dirac_c
+
+! ------------------------------------------------------------------------------
+subroutine wrf_field_convert_to_c(c_key_fld, c_key_ug) bind (c,name='wrf_field_convert_to_f90')
+
+use iso_c_binding
+use wrf_fields
+use unstructured_grid_mod
+implicit none
+integer(c_int), intent(in) :: c_key_fld
+integer(c_int), intent(in) :: c_key_ug
+type(wrf_field), pointer :: fld
+type(unstructured_grid), pointer :: ug
+
+call wrf_field_registry%get(c_key_fld,fld)
+call unstructured_grid_registry%get(c_key_ug,ug)
+
+call convert_to_ug(fld, ug)
+
+end subroutine wrf_field_convert_to_c
+! ------------------------------------------------------------------------------
+subroutine wrf_field_convert_from_c(c_key_fld, c_key_ug) bind (c,name='wrf_field_convert_from_f90')
+
+use iso_c_binding
+use wrf_fields
+use unstructured_grid_mod
+implicit none
+integer(c_int), intent(in) :: c_key_fld
+integer(c_int), intent(in) :: c_key_ug
+type(wrf_field), pointer :: fld
+type(unstructured_grid), pointer :: ug
+
+call wrf_field_registry%get(c_key_fld,fld)
+call unstructured_grid_registry%get(c_key_ug,ug)
+
+call convert_from_ug(fld, ug)
+
+end subroutine wrf_field_convert_from_c
+! ------------------------------------------------------------------------------
+
 subroutine wrf_field_random_c(c_key_self) bind(c,name='wrf_field_random_f90')
 use iso_c_binding
 use wrf_fields
