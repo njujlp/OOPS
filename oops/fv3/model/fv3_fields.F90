@@ -15,7 +15,7 @@ private
 public :: fv3_field, &
         & create, delete, zeros, random, copy, &
         & self_add, self_schur, self_sub, self_mul, axpy, &
-        & dot_prod, add_incr, diff_incr, &
+        & dot_prod, add_incr, diff_incr, dirac,&
         & read_file, write_file, gpnorm, fldrms, &
         & change_resol, convert_to_ug, convert_from_ug
 public :: fv3_field_registry
@@ -1008,6 +1008,46 @@ enddo
 end subroutine convert_from_ug
 
 ! ------------------------------------------------------------------------
+subroutine dirac(self, c_conf)
+use iso_c_binding
+implicit none
+type(fv3_field), intent(inout) :: self
+type(c_ptr), intent(in)       :: c_conf   !< Configuration
+integer :: ndir,idir,ildir,ifdir,ioff
+integer,allocatable :: ixdir(:),iydir(:)
+character(len=max_string_length) :: idirchar
+
+call check(self)
+
+! Get Diracs positions
+ndir = config_get_int(c_conf,"ndir")
+allocate(ixdir(ndir))
+allocate(iydir(ndir))
+do idir=1,ndir
+   write(idirchar,'(i3)') idir
+   ixdir(idir) = config_get_int(c_conf,"ixdir("//trim(adjustl(idirchar))//")")
+   iydir(idir) = config_get_int(c_conf,"iydir("//trim(adjustl(idirchar))//")")
+end do
+ildir = config_get_int(c_conf,"ildir")
+ifdir = config_get_int(c_conf,"ifdir")
+
+! Check
+if (ndir<1) call abor1_ftn("fv3_fields:dirac non-positive ndir")
+if (any(ixdir<1).or.any(ixdir>self%geom%nx)) call abor1_ftn("fv3_fields:dirac invalid ixdir")
+if (any(iydir<1).or.any(iydir>self%geom%ny)) call abor1_ftn("fv3_fields:dirac invalid iydir")
+if ((ildir<1).or.(ildir>self%nl)) call abor1_ftn("fv3_fields:dirac invalid ildir")
+if ((ifdir<1).or.(ifdir>self%nf3d)) call abor1_ftn("fv3_fields:dirac invalid ifdir")
+
+! Setup Diracs
+call zeros(self)
+ioff = (ifdir-1)*self%nl
+do idir=1,ndir
+   self%gfld(ixdir(idir),iydir(idir),ioff+ildir) = 1.0
+end do
+
+end subroutine dirac
+
+! ------------------------------------------------------------------------------
 
 
 ! ------------------------------------------------------------------------------

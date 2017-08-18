@@ -126,6 +126,10 @@ void Increment::axpy(const double & zz, const Increment & dx,
   fields_->axpy(zz, *dx.fields_);
 }
 // -----------------------------------------------------------------------------
+void Increment::dirac(const eckit::Configuration & config) {
+  fields_->dirac(config);
+}
+// -----------------------------------------------------------------------------
 void Increment::accumul(const double & zz, const State & xx) {
   fields_->axpy(zz, xx.fields());
 }

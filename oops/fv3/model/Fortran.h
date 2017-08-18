@@ -43,6 +43,8 @@ extern "C" {
 
   void fv3_field_copy_f90(const int & keyFlds, const int & keyFldsOther);
   void fv3_field_zero_f90(const int & keyFlds);
+  void fv3_field_dirac_f90(const int & keyFlds, const eckit::Configuration * const *);
+
   void fv3_field_self_add_f90(const int & keyFlds, const int & keyFldsOther);
   void fv3_field_self_sub_f90(const int & keyFlds, const int & keyFldsOther);
   void fv3_field_self_mul_f90(const int & keyFlds, const double &);

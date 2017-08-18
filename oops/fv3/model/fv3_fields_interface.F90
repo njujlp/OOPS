@@ -441,4 +441,17 @@ call convert_from_ug(fld, ug)
 end subroutine fv3_field_convert_from_c
 ! ------------------------------------------------------------------------------
 
+subroutine fv3_field_dirac_c(c_key_self,c_conf) bind(c,name='fv3_field_dirac_f90')
+use iso_c_binding
+use fv3_fields
+implicit none
+integer(c_int), intent(in) :: c_key_self
+type(c_ptr), intent(in)    :: c_conf !< Configuration
+type(fv3_field), pointer :: self
+
+call fv3_field_registry%get(c_key_self,self)
+call dirac(self,c_conf)
+
+end subroutine fv3_field_dirac_c
+
 
