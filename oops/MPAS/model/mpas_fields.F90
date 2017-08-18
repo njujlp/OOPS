@@ -783,7 +783,7 @@ cmask(:) = 1      ! SH: We do not need a binary option (0 or 1) for MPAS. Just s
 call create_unstructured_grid(ug, nl, zz)
 
 do i=1,nC
-  call add_column(ug, self%geom%latCell(i), self%geom%lonCell(i), nl, self%nf, self%ns, cmask, 1)
+  call add_column(ug, self%geom%latCell(i), self%geom%lonCell(i), self%geom%areaCell(i), nl, self%nf, self%ns, cmask, 1)
   j = 0
   do v=1,self%nf
   do k=1,nl

@@ -143,8 +143,8 @@ add_subdirectory( src )
 # which find OOPS as an installed package or subproject
 
 add_subdirectory( MPAS )
-add_subdirectory( l95 )
-add_subdirectory( qg )
+#add_subdirectory( l95 )
+#add_subdirectory( qg )
 
 add_subdirectory( ModelX )
 

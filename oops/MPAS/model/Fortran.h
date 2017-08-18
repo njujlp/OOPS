@@ -63,6 +63,9 @@ extern "C" {
   void mpas_field_write_file_f90(const int & keyFlds, const eckit::Configuration * const *,
                                const util::DateTime * const *);
 
+  void mpas_field_convert_to_f90(const int &, const int &);
+  void mpas_field_convert_from_f90(const int &, const int &);
+
   void mpas_field_gpnorm_f90(const int & keyFlds, const int &, double &);
   void mpas_field_sizes_f90(const int & keyFlds, int &, int &, int &, int &);
   void mpas_field_rms_f90(const int & keyFlds, double &);

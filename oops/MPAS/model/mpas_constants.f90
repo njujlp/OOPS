@@ -19,7 +19,7 @@ implicit none
    real (kind=kind_real), parameter :: cv      = cp - rgas           !< Constant: Specific heat of dry air at constant volume [J kg-1 K-1]
 
 !--- Dimensional parameters (copied from MPAS/src/core_atmosphere/physics/mpas_atmphys_constants.F)
-   real(kind=kind_real), parameter :: deg2rad = 3.1415926/180. !conversion from degree to radiant  
+   real(kind=kind_real), parameter :: deg2rad = pii/180.            !< conversion from degree to radiant  
    real(kind=kind_real), parameter :: p0      = 100000.             !< Constant: reference pressure 
 !--- derived parameters
    real (kind=kind_real), parameter :: rcv    = rgas/(cp-rgas)      !< Constant

@@ -392,3 +392,38 @@ if (fld%lbc) nb = 2
 end subroutine mpas_fieldnum_c
 
 ! ------------------------------------------------------------------------------
+
+subroutine mpas_field_convert_to_c(c_key_fld, c_key_ug) bind (c,name='mpas_field_convert_to_f90')
+use iso_c_binding
+use mpas_fields
+use unstructured_grid_mod
+implicit none
+integer(c_int), intent(in) :: c_key_fld
+integer(c_int), intent(in) :: c_key_ug
+type(mpas_field), pointer :: fld
+type(unstructured_grid), pointer :: ug
+
+call mpas_field_registry%get(c_key_fld,fld)
+call unstructured_grid_registry%get(c_key_ug,ug)
+
+call convert_to_ug(fld, ug)
+
+end subroutine mpas_field_convert_to_c
+! ------------------------------------------------------------------------------
+subroutine mpas_field_convert_from_c(c_key_fld, c_key_ug) bind (c,name='mpas_field_convert_from_f90')
+use iso_c_binding
+use mpas_fields
+use unstructured_grid_mod
+implicit none
+integer(c_int), intent(in) :: c_key_fld
+integer(c_int), intent(in) :: c_key_ug
+type(mpas_field), pointer :: fld
+type(unstructured_grid), pointer :: ug
+
+call mpas_field_registry%get(c_key_fld,fld)
+call unstructured_grid_registry%get(c_key_ug,ug)
+
+call convert_from_ug(fld, ug)
+
+end subroutine mpas_field_convert_from_c
+! ------------------------------------------------------------------------------

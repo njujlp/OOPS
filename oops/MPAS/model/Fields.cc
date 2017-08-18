@@ -133,11 +133,11 @@ void Fields::diff(const Fields & x1, const Fields & x2) {
 }
 // -----------------------------------------------------------------------------
 void Fields::convert_to(oops::UnstructuredGrid & ug) const {
-  ABORT("ModelX:Fields conversion to unstructured grid not implemented.");
+  mpas_field_convert_to_f90(keyFlds_, ug.toFortran());
 }
 // -----------------------------------------------------------------------------
 void Fields::convert_from(const oops::UnstructuredGrid & ug) {
-  ABORT("ModelX:Fields conversion from unstructured grid not implemented.");
+  mpas_field_convert_from_f90(keyFlds_, ug.toFortran());
 }
 // -----------------------------------------------------------------------------
 void Fields::read(const eckit::Configuration & config) {

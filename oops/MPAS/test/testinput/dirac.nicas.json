@@ -3,14 +3,14 @@
     "categories": "Info, Test, Warning, Error"
   },
   "resolution": {
-    "gridfname": "./Data/x1.40962.init.2012052500.e1.nc"
+    "gridfname": "Data/x1.40962.init.2012052500.e1.nc"
   },
   "variables": {
     "variables": "onevar"
   },
   "initial": {
     "read_from_file": "1",
-    "filename": "./Data/x1.40962.init.2012052500.e1.nc",
+    "filename": "Data/x1.40962.init.2012052500.e1.nc",
     "date": "2012-05-25T00:00:00Z"
   },
   "Covariance": {
@@ -54,9 +54,11 @@
       "Lbh_file": "none",
       "Lbh(1)": 3000.0e3,
       "Lbh(2)": 3000.0e3,
+      "Lbh(3)": 3000.0e3,
       "Lbv_file": "none",
       "Lbv(1)": 0.4,
       "Lbv(2)": 0.4,
+      "Lbv(3)": 0.4,
       "resol": 6.0,
       "network": 0,
       "nproc": 1,
@@ -64,23 +66,23 @@
     },
         "state": [
           {
-            "filename": "./Data/x1.40962.init.2012052500.e1.nc",
+            "filename": "Data/x1.40962.init.2012052500.e1.nc",
             "date": "2012-05-25T00:00:00Z"
           },
           {
-            "filename": "./Data/x1.40962.init.2012052500.e2.nc",
+            "filename": "Data/x1.40962.init.2012052500.e2.nc",
             "date": "2012-05-25T00:00:00Z"
           },
           {
-            "filename": "./Data/x1.40962.init.2012052500.e3.nc",
+            "filename": "Data/x1.40962.init.2012052500.e3.nc",
             "date": "2012-05-25T00:00:00Z"
           },
           {
-            "filename": "./Data/x1.40962.init.2012052500.e4.nc",
+            "filename": "Data/x1.40962.init.2012052500.e4.nc",
             "date": "2012-05-25T00:00:00Z"
           },
           {
-            "filename": "./Data/x1.40962.init.2012052500.e5.nc",
+            "filename": "Data/x1.40962.init.2012052500.e5.nc",
             "date": "2012-05-25T00:00:00Z"
           }
         ]

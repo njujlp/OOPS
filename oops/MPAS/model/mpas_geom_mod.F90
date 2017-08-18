@@ -33,6 +33,7 @@ type :: mpas_geom
  integer :: maxEdges
  character(len=max_string_length) :: gridfname
  real(kind=kind_real), DIMENSION(:),   ALLOCATABLE :: latCell, lonCell, xland
+ real(kind=kind_real), DIMENSION(:),   ALLOCATABLE :: areaCell
  real(kind=kind_real), DIMENSION(:),   ALLOCATABLE :: latEdge, lonEdge
  real(kind=kind_real), DIMENSION(:,:), ALLOCATABLE :: edgeNormalVectors
  real(kind=kind_real), DIMENSION(:,:), ALLOCATABLE :: zgrid
@@ -98,6 +99,7 @@ allocate(self%lonCell(self%nCells))
 allocate(self%latEdge(self%nEdges))
 allocate(self%lonEdge(self%nEdges))
 allocate(self%xland(self%nCells))
+allocate(self%areaCell(self%nCells))
 allocate(self%edgeNormalVectors(3, self%nEdges))
 allocate(self%zgrid(self%nVertLevelsP1, self%nCells))
 
@@ -106,6 +108,8 @@ call ncerr(string1, nf90_inq_varid(ncid,'latCell',varid))
 call ncerr(string1, nf90_get_var  (ncid,varid,self%latCell)) !,1,self%nCells))
 call ncerr(string1, nf90_inq_varid(ncid,'lonCell',varid))
 call ncerr(string1, nf90_get_var  (ncid,varid,self%lonCell)) !,1,self%nCells))
+call ncerr(string1, nf90_inq_varid(ncid,'areaCell',varid))
+call ncerr(string1, nf90_get_var  (ncid,varid,self%areaCell)) !,1,self%nCells))
 call ncerr(string1, nf90_inq_varid(ncid,'latEdge',varid))
 call ncerr(string1, nf90_get_var  (ncid,varid,self%latEdge)) !,1,self%nEdges))
 call ncerr(string1, nf90_inq_varid(ncid,'lonEdge',varid))
@@ -143,8 +147,20 @@ call mpas_geom_registry%get(c_key_self , self )
 
 other%nCells        = self%nCells
 other%nEdges        = self%nEdges
+other%nVertices     = self%nVertices
 other%nVertLevels   = self%nVertLevels
 other%nVertLevelsP1 = self%nVertLevelsP1
+other%nSoilLevels   = self%nSoilLevels 
+other%vertexDegree  = self%vertexDegree
+other%maxEdges      = self%maxEdges
+other%latCell       = self%latCell
+other%lonCell       = self%lonCell
+other%areaCell      = self%areaCell
+other%latEdge       = self%latEdge
+other%lonEdge       = self%lonEdge
+other%xland         = self%xland
+other%edgeNormalVectors = self%edgeNormalVectors
+other%zgrid         = self%zgrid
 
 end subroutine c_mpas_geo_clone
 
