@@ -642,55 +642,55 @@ SUBROUTINE write_file(fld, c_conf, vdate)
         fname=analfile(1:itindex+3)//ctile//analfile(itindex+5:)
 
         IF (nf90_noerr /= nf90_open(path=TRIM(ADJUSTL(fname)),&
-             &mode=nf90_nowrite,ncid=ncfileid)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.1")
+             &mode=nf90_write,ncid=ncfileid)) &
+             &CALL abor1_ftn("fv3_fields.write_file:stop.1")
 
         varname=fld%fldnames3d(ifield)
 
         IF (nf90_noerr /= nf90_inq_varid(ncfileid,TRIM(varname),&
              &varid=ncvarid)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.2"//&
+             &CALL abor1_ftn("fv3_fields.write_file:stop.2"//&
              &TRIM(varname))
 
         IF (nf90_noerr /= nf90_inquire_variable(ncid=ncfileid,&
              &varid=ncvarid,dimids=dimids)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.3"//&
+             &CALL abor1_ftn("fv3_fields.write_file:stop.3"//&
              &TRIM(varname))
 
         IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(1),&
              &len = ix)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.4"//&
+             &CALL abor1_ftn("fv3_fields.write_file:stop.4"//&
              &TRIM(varname))
 
         IF (ix /= fld%nxg ) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.4.1"//&
+             &CALL abor1_ftn("fv3_fields.write_file:stop.4.1"//&
              &TRIM(varname))
 
         IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(2),&
              &len = iy)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.5"//&
+             &CALL abor1_ftn("fv3_fields.write_file:stop.5"//&
              &TRIM(varname))
 
         IF (iy /= fld%nyg ) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.5.1"//&
+             &CALL abor1_ftn("fv3_fields.write_file:stop.5.1"//&
              &TRIM(varname))
 
         IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(3),&
              &len = iz)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.6"//&
+             &CALL abor1_ftn("fv3_fields.write_file:stop.6"//&
              &TRIM(varname))
 
         IF (iz /= fld%nl ) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.6.1"//&
+             &CALL abor1_ftn("fv3_fields.write_file:stop.6.1"//&
              &TRIM(varname))
 
         IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(4),&
              &len = it)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.7"//&
+             &CALL abor1_ftn("fv3_fields.write_file:stop.7"//&
              &TRIM(varname))
 
         IF (it /= 1 ) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.7.1"//&
+             &CALL abor1_ftn("fv3_fields.write_file:stop.7.1"//&
              &TRIM(varname))
 
      ENDIF
@@ -705,7 +705,7 @@ SUBROUTINE write_file(fld, c_conf, vdate)
      
      IF (key == 0) THEN
         IF (nf90_noerr /= nf90_put_var(ncfileid, ncvarid, gfldg))&
-             &CALL abor1_ftn("fv3_fields.read_file:stop.8")
+             &CALL abor1_ftn("fv3_fields.write_file:stop.8")
      ENDIF
      
   ENDDO
@@ -718,39 +718,39 @@ SUBROUTINE write_file(fld, c_conf, vdate)
 
         IF (nf90_noerr /= nf90_inq_varid(ncfileid,TRIM(varname),&
              &varid=ncvarid)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.2"//&
+             &CALL abor1_ftn("fv3_fields.write_file:stop.2"//&
              &TRIM(varname))
 
         IF (nf90_noerr /= nf90_inquire_variable(ncid=ncfileid,&
              &varid=ncvarid,dimids=dimids)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.3"//&
+             &CALL abor1_ftn("fv3_fields.write_file:stop.3"//&
              &TRIM(varname))
 
         IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(1),&
              &len = ix)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.4"//&
+             &CALL abor1_ftn("fv3_fields.write_file:stop.4"//&
              &TRIM(varname))
 
         IF (ix /= fld%nxg ) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.4.1"//&
+             &CALL abor1_ftn("fv3_fields.write_file:stop.4.1"//&
              &TRIM(varname))
 
         IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(2),&
              &len = iy)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.5"//&
+             &CALL abor1_ftn("fv3_fields.write_file:stop.5"//&
              &TRIM(varname))
 
         IF (iy /= fld%nyg ) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.5.1"//&
+             &CALL abor1_ftn("fv3_fields.write_file:stop.5.1"//&
              &TRIM(varname))
 
         IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(3),&
              &len = it)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.6"//&
+             &CALL abor1_ftn("fv3_fields.write_file:stop.6"//&
              &TRIM(varname))
 
         IF (it /= 1 ) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.6.1"//&
+             &CALL abor1_ftn("fv3_fields.write_file:stop.6.1"//&
              &TRIM(varname))
 
      ENDIF
@@ -765,14 +765,14 @@ SUBROUTINE write_file(fld, c_conf, vdate)
 
      IF (key == 0) THEN
         IF (nf90_noerr /= nf90_put_var(ncfileid, ncvarid, gfldg(:,:,1)))&
-             &CALL abor1_ftn("fv3_fields.read_file:stop.8")
+             &CALL abor1_ftn("fv3_fields.write_file:stop.8")
      ENDIF
 
   ENDDO
 
   IF (key == 0) THEN
      IF (nf90_noerr /= nf90_close(ncfileid))&
-          &CALL abor1_ftn("fv3_fields.read_file:stop.9")
+          &CALL abor1_ftn("fv3_fields.write_file:stop.9")
   ENDIF
 
   DEALLOCATE(gfldg)

@@ -19,7 +19,7 @@
     "ihisttime": "4",
     "analfile": "/glade/p/work/mariusz/fv3_ensemble/2015081006/OUTPUT_JEDI/mem001/anal.tile?.nc",
     "date": "2015-08-10T06:00:00Z",
-    "norm": "125.192173",
+    "norm": "125.1746492",
     "tolerance": "0.005"
   },
   "StateTest": {
@@ -29,7 +29,7 @@
     "ihisttime": "4",
     "analfile": "/glade/p/work/mariusz/fv3_ensemble/2015081006/OUTPUT_JEDI/mem001/anal.tile?.nc",
     "date": "2015-08-10T06:00:00Z",
-    "norm": "125.192173",
+    "norm": "125.1746492",
     "tolerance": "0.005"
   }
 }
