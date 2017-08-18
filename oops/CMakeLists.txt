@@ -142,6 +142,7 @@ add_subdirectory( src )
 # Build plugins: The idea is that these become separate builds,
 # which find OOPS as an installed package or subproject
 
+add_subdirectory( MPAS )
 add_subdirectory( l95 )
 add_subdirectory( qg )
 
