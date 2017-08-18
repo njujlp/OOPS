@@ -31,7 +31,6 @@ type :: mpas_field
   type(mpas_geom), pointer :: geom                                 !< Number of unstructured grid cells
   integer :: nf                           !< Number of variables in fld
   integer :: ns                           !< Number of surface fields (x1d [nCells])
-  logical :: lbc                                    !< Lateral boundary - 0 for global MPAS
   real(kind=kind_real), pointer :: fld(:,:,:)       !< all 3D fields in each column ([nCells,nVertLevels,nf])
   real(kind=kind_real), pointer :: th(:,:)          !< Potential temperature
   real(kind=kind_real), pointer ::  r(:,:)          !< Dry density
@@ -372,9 +371,10 @@ call check(fld)
 call check(rhs)
 
 ! FIXME: We just copy rhs to fld for now. Need an actual interpolation routine later. (SH)
-if (fld%geom%nCells /= rhs%geom%nCells .or.  fld%geom%nVertLevels /= rhs%geom%nVertLevels) then
+if (fld%geom%nCells == rhs%geom%nCells .and.  fld%geom%nVertLevels == rhs%geom%nVertLevels) then
   call copy(fld, rhs)
 else
+  write(0,*) fld%geom%nCells, rhs%geom%nCells, fld%geom%nVertLevels, rhs%geom%nVertLevels
   call abor1_ftn("mpas_fields:field_resol: dimension mismatch")
 endif
 
@@ -504,6 +504,7 @@ integer, dimension(fld%nf)  :: varid
 integer :: fid, ncid, cellid, levelid, xtype, dimlen, dimid, vid
 integer :: numdims, nDimensions, nVariables, nAttributes, unlimitedDimID
 integer :: ntimes, n
+integer :: latid, lonid
 
 call check(fld)
 
@@ -512,7 +513,7 @@ filename = genfilename(c_conf,max_string_length,vdate)
 WRITE(buf,*) 'mpas_field:write_file: writing '//trim(filename)
 call log%info(buf)
 string2 = trim(filename)
-call ncerr(string2, nf90_open(trim(filename), nf90_clobber, ncid))
+call ncerr(string2, nf90_create(trim(filename), nf90_clobber, ncid))
 
 call ncerr(string2, nf90_def_dim(  ncid, 'Time',        nf90_unlimited, unlimitedDimID))
 call ncerr(string2, nf90_def_dim(  ncid, 'nCells',      fld%geom%nCells,      cellid))
@@ -528,10 +529,18 @@ do i=1,fld%nf
                             (/ levelid, cellid, unlimitedDimID /), varid(i)))
 end do
 
+!> lat/lon
+call ncerr(string2, nf90_def_var(ncid, "latCell", nf90_double, (/cellid/), latid))
+call ncerr(string2, nf90_def_var(ncid, "lonCell", nf90_double, (/cellid/), lonid))
+
 call ncerr(string2, nf90_enddef(ncid))
 
+call ncerr(string2, nf90_put_var(ncid, latid, fld%geom%latCell))
+call ncerr(string2, nf90_put_var(ncid, lonid, fld%geom%lonCell))
+
 do i=1,fld%nf
-   call ncerr(string2, nf90_put_var(ncid, varid(i), fld%fld(:,:,i)))
+   call ncerr(string2, nf90_put_var(ncid, varid(i), fld%fld(:,:,i), &
+   start=(/1,1,1/), count=(/fld%geom%nVertLevels,fld%geom%nCells,1/)))
 enddo
 
 call ncerr(string2, nf90_close(ncid))
@@ -551,7 +560,10 @@ integer :: nl, nC
 associate(nl=>fld%geom%nVertLevels, nC=>fld%geom%nCells)
 
 call check(fld)   !(fld(nC,nl,nf))
-if (fld%nf /= nf) call abor1_ftn("mpas_fields_gpnorm: error number of fields")
+if (fld%nf /= nf) then
+    write(*,*) 'mpas_fields.F90 in gpnorm: ',fld%nf, nf
+    call abor1_ftn("mpas_fields_gpnorm: error number of fields")
+endif
 
 do jj=1,fld%nf
   pstat(1,jj)=minval(fld%fld(:,:,jj))
@@ -818,9 +830,9 @@ do i=1,nC
    do k=1,nl
       j = j+1
       self%fld(i,k,v) = current%column%cols(j)
-      current => current%next
    enddo
    enddo
+   current => current%next
 enddo
 
 end associate

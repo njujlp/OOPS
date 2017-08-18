@@ -373,12 +373,12 @@ end subroutine mpas_field_rms_c
 
 ! ------------------------------------------------------------------------------
 
-subroutine mpas_fieldnum_c(c_key_fld, nx, ny, nf, nb) bind(c,name='mpas_field_sizes_f90')
+subroutine mpas_fieldnum_c(c_key_fld, nx, ny, nf) bind(c,name='mpas_field_sizes_f90')
 use iso_c_binding
 use mpas_fields
 implicit none
 integer(c_int), intent(in) :: c_key_fld
-integer(kind=c_int), intent(inout) :: nx, ny, nf, nb
+integer(kind=c_int), intent(inout) :: nx, ny, nf
 type(mpas_field), pointer :: fld
 
 call mpas_field_registry%get(c_key_fld,fld)
@@ -386,8 +386,6 @@ call mpas_field_registry%get(c_key_fld,fld)
 nx = fld%geom%nCells
 ny = fld%geom%nVertLevels
 nf = fld%nf
-nb =0
-if (fld%lbc) nb = 2
 
 end subroutine mpas_fieldnum_c
 

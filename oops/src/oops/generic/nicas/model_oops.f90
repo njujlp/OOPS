@@ -53,6 +53,9 @@ ndata%nl0 = nam%nl
 ndata%nc0 = size(lats)
 ndata%nlev = size(levs)
 
+! Check
+if (any(nam%levs>ndata%nlev)) call msgerror('not enough levels in model_oops')
+
 ! Pack
 call ndata_alloc(ndata)
 ndata%lon = lons*deg2rad
