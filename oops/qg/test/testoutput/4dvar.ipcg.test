@@ -12,7 +12,7 @@ Test     : CostJo   : Nonlinear Jo = 282.636, nobs = 800, Jo/n = 0.353295, err =
 Test     : CostJo   : Nonlinear Jo = 36.1937, nobs = 400, Jo/n = 0.0904843, err = 1.2
 Test     : CostJcDFI: Nonlinear Jc = 38.6665
 Test     : CostFunction: Nonlinear J = 1734.6
-Test     : IPCGMinimizer: reduction in residual norm = 0.0362551
+Test     : IPCGMinimizer: reduction in residual norm = 0.0362553
 Test     : CostFunction::addIncrement: Analysis norm: 14.6791
 Test     : CostJb   : Nonlinear Jb = 169.718
 Test     : CostJo   : Nonlinear Jo = 152.743, nobs = 800, Jo/n = 0.190928, err = 0.4

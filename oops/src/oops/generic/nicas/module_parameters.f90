@@ -303,12 +303,11 @@ logical :: init
 type(meshtype) :: mesh
 
 ! Create mesh
-if ((.not.allocated(ndata%area)).or.nam%mask_check.or.nam%network) &
+if ((.not.all(ndata%area>0.0)).or.nam%mask_check.or.nam%network) &
  & call create_mesh(ndata%rng,ndata%nc0,ndata%lon,ndata%lat,.true.,mesh)
 
-if (.not.allocated(ndata%area)) then
+if ((.not.all(ndata%area>0.0))) then
    ! Allocation
-   allocate(ndata%area(ndata%nl0))
    allocate(ltri(6,2*(mesh%nnr-2)))
 
    ! Create triangles list

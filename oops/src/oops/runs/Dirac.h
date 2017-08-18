@@ -73,6 +73,12 @@ template <typename MODEL> class Dirac : public Application {
     const util::DateTime bgndate(xx.validTime());
     Log::info() << "Setup times OK" << std::endl;
 
+//  Setup increment
+    Increment_ dxinit(resol, vars, bgndate);
+    const eckit::LocalConfiguration diracConfig(fullConfig, "dirac");
+    dxinit.dirac(diracConfig);
+    Log::info() << "Setup increment OK" << std::endl;
+
 //  Setup localization
     const eckit::LocalConfiguration covarConfig(fullConfig, "Covariance");
     const eckit::LocalConfiguration locConfig(covarConfig, "localization");
@@ -80,16 +86,11 @@ template <typename MODEL> class Dirac : public Application {
     loc_.reset(new Localization_(xx, locConfig));
     Log::info() << "Setup localization OK" << std::endl;
 
-//  Setup increment
-    Increment_ dxinit(resol, vars, bgndate);
-    const eckit::LocalConfiguration diracConfig(fullConfig, "dirac");
-    dxinit.dirac(diracConfig);
-    Log::info() << "Setup increment OK" << std::endl;
-
 //  Apply NICAS
     Increment_ dx(dxinit);
     loc_->multiply(dx);
     Log::info() << "Apply NICAS OK" << std::endl;
+    Log::test() << "Increment norm: " << dx.norm() << std::endl;
 
 //  Write increment
     const eckit::LocalConfiguration output_nicas(fullConfig, "output_nicas");
@@ -107,6 +108,7 @@ template <typename MODEL> class Dirac : public Application {
     Increment_ dxout(resol, vars, bgndate);
     Bens->multiply(dxin,dxout);
     Log::info() << "Apply full ensemble B matrix OK" << std::endl;
+    Log::test() << "Increment norm: " << dxout.norm() << std::endl;
 
 //  Write increment
     const eckit::LocalConfiguration output_Bens(fullConfig, "output_Bens");

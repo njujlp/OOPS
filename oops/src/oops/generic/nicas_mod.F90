@@ -11,9 +11,9 @@ use iso_c_binding
 use kinds
 use config_mod
 use unstructured_grid_mod
-use module_apply_nicas, only: apply_nicas
-use module_nicas, only: nicas_driver
 use model_oops, only: model_oops_coord
+use module_apply_nicas, only: apply_nicas
+use module_driver, only: nicas_driver
 use module_namelist, only: nam,namcheck
 use tools_display, only: listing_setup
 use type_mpl, only: mpl
@@ -57,26 +57,27 @@ contains
 !  C++ interfaces
 ! ------------------------------------------------------------------------------
 
-subroutine create_nicas_c(key, c_conf, cnh, clats, clons, cnv, clevs, ccmask) bind(c, name='create_nicas_f90')
+subroutine create_nicas_c(key, c_conf, cnh, clats, clons, careas, cnv, clevs, ccmask) bind(c, name='create_nicas_f90')
 implicit none
 integer(c_int), intent(inout) :: key
 type(c_ptr), intent(in) :: c_conf
 integer(c_int), intent(in) :: cnh, cnv
-real(c_double), intent(in) :: clats(cnh), clons(cnh), clevs(cnv)
+real(c_double), intent(in) :: clats(cnh), clons(cnh), careas(cnh), clevs(cnv)
 integer(c_int), intent(in) :: ccmask(cnh*cnv)
 type(nicas), pointer :: self
-real(kind=kind_real) :: lats(cnh), lons(cnh), levs(cnv)
+real(kind=kind_real) :: lats(cnh), lons(cnh), areas(cnh), levs(cnv)
 integer :: cmask(cnh*cnv)
 call nicas_registry%init()
 call nicas_registry%add(key)
 call nicas_registry%get(key,self)
 lats(:)=clats(:)
 lons(:)=clons(:)
+areas(:)=careas(:)
 levs(:)=clevs(:)
 cmask(:)=ccmask(:)
 
-print*, 'TOTO',cnv
-call create_nicas(self, c_conf, lats, lons, levs, cmask)
+call create_nicas(self, c_conf, lats, lons, areas, levs, cmask)
+
 end subroutine create_nicas_c
 
 ! ------------------------------------------------------------------------------
@@ -107,16 +108,14 @@ end subroutine nicas_multiply_c
 !  End C++ interfaces
 ! ------------------------------------------------------------------------------
 
-subroutine create_nicas(self, c_conf, lats, lons, levs, mask)
+subroutine create_nicas(self, c_conf, lats, lons, areas, levs, mask)
 implicit none
 type(nicas), intent(inout) :: self
 type(c_ptr), intent(in) :: c_conf
-real(kind=kind_real), intent(in) :: lats(:), lons(:), levs(:)
+real(kind=kind_real), intent(in) :: lats(:), lons(:), areas(:), levs(:)
 integer, intent(in) :: mask(:)
 integer :: nc0,nlev
 character(len=4) :: myprocchar,nprocchar,nthreadchar
-
-print*, 'TATA', size(levs)
 
 ! NICAS setup
 call log%info("NICAS setup")
@@ -139,7 +138,7 @@ call log%info("Parallel setup: "//nprocchar//" MPI tasks and "//nthreadchar//" O
 
 ! Initialize coordinates
 call log%info("Initialize coordinates")
-call model_oops_coord(lats,lons,levs,mask,self%ndata)
+call model_oops_coord(lats,lons,areas,levs,mask,self%ndata)
 
 ! Call driver
 call nicas_driver(self%ndata,self%ndataloc)
