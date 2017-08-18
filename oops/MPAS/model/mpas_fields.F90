@@ -527,6 +527,7 @@ do i=1,fld%nf
 
    call ncerr(string2, nf90_def_var(ncid, trim(fld%fldnames(i)), nf90_double, &
                             (/ levelid, cellid, unlimitedDimID /), varid(i)))
+!                            (/ levelid, cellid /), varid(i)))
 end do
 
 !> lat/lon
@@ -538,9 +539,11 @@ call ncerr(string2, nf90_enddef(ncid))
 call ncerr(string2, nf90_put_var(ncid, latid, fld%geom%latCell))
 call ncerr(string2, nf90_put_var(ncid, lonid, fld%geom%lonCell))
 
+!allocate(self%fld(nC,nl,self%nf))
 do i=1,fld%nf
    call ncerr(string2, nf90_put_var(ncid, varid(i), fld%fld(:,:,i), &
-   start=(/1,1,1/), count=(/fld%geom%nVertLevels,fld%geom%nCells,1/)))
+   start=(/1,1,1/), count=(/1,fld%geom%nCells,fld%geom%nVertLevels/)))
+!   start=(/1,1/), count=(/fld%geom%nVertLevels,fld%geom%nCells/)))
 enddo
 
 call ncerr(string2, nf90_close(ncid))
