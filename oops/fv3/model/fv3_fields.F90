@@ -50,7 +50,7 @@ end type fv3_field
 #define LISTED_TYPE fv3_field
 
 !> Linked list interface - defines registry_t type
-#include "linkedList_i.f"
+#include "util/linkedList_i.f"
 
 !> Global registry
 type(registry_t) :: fv3_field_registry
@@ -59,7 +59,7 @@ type(registry_t) :: fv3_field_registry
 contains
 ! ------------------------------------------------------------------------------
 !> Linked list implementation
-#include "linkedList_c.f"
+#include "util/linkedList_c.f"
 
 ! ------------------------------------------------------------------------------
 
@@ -557,9 +557,14 @@ SUBROUTINE read_file(fld, c_conf, vdate)
      ioff=ioff+1
 
   ENDDO
-  
+
   DEALLOCATE(gfldg)
-  
+
+  IF (key == 0) THEN  
+     IF (nf90_noerr /= nf90_close(ncfileid))&
+          &CALL abor1_ftn("fv3_fields.read_file:stop.9")
+  ENDIF
+
   CALL check(fld)
   
   RETURN
@@ -569,53 +574,235 @@ END SUBROUTINE read_file
 
 ! ------------------------------------------------------------------------------
 
-subroutine write_file(fld, c_conf, vdate)
-use iso_c_binding
-use datetime_mod
-use fckit_log_module, only : log
+SUBROUTINE write_file(fld, c_conf, vdate)
+  USE iso_c_binding
+  USE datetime_mod
+  USE fckit_log_module, ONLY : log
 
-implicit none
-type(fv3_field), intent(in) :: fld    !< Fields
-type(c_ptr), intent(in)    :: c_conf !< Configuration
-type(datetime), intent(in) :: vdate  !< DateTime
+  IMPLICIT NONE
+  TYPE(fv3_field), INTENT(in) :: fld    !< Fields
+  TYPE(c_ptr), INTENT(in)    :: c_conf !< Configuration
+  TYPE(datetime), INTENT(in) :: vdate  !< DateTime
 
-integer, parameter :: iunit=11
-character(len=max_string_length) :: record
-character(len=max_string_length) :: filename
-character(len=20) :: sdate, fmtn
-character(len=4)  :: cnx
-character(len=11) :: fmt1='(X,ES24.16)'
-character(len=1024):: buf
-integer :: jf, jy, jx, is
+  INTEGER :: ihisttime,itindex,ifield,ix,iy,iz,it,itile,&
+       &ioff,ioffg,joffg
+  CHARACTER(len=max_string_length) :: fname,analfile
+  INTEGER :: ncfileid,ncvarid,ncstatus,nprocs
+  INTEGER, DIMENSION(nc_maxdims) :: dimids
+  CHARACTER(len=1) :: ctile
+  CHARACTER(len=NF90_MAX_NAME) :: varname
+  REAL(kind=kind_real), ALLOCATABLE, DIMENSION(:,:,:) :: gfldg
 
-call check(fld)
+! mpi definitions.
+  INCLUDE 'mpif.h'
+  INTEGER :: MPI_Status(MPI_STATUS_SIZE),numprocs,nproc,iret,ierr
+  INTEGER :: color,key,newcomm,newnumprocs,newnproc,numprocs_per_tile,&
+       &numprocself,numprocself_per_tile,pe_root
+  LOGICAL :: mpi_started
 
-filename = genfilename(c_conf,max_string_length,vdate)
-WRITE(buf,*) 'fv3_field:write_file: writing '//filename
-call log%info(buf)
-open(unit=iunit, file=trim(filename), form='formatted', action='write')
+  CHARACTER(len=20) :: sdate
+  CALL datetime_to_string(vdate, sdate)
 
-is=0
+  analfile = config_get_string(c_conf,max_string_length,"analfile")
+  itindex=INDEX(analfile,'tile')
 
-write(iunit,*) fld%nx, fld%ny, fld%nl, fld%nftot, is
+  CALL check(fld)
 
-call datetime_to_string(vdate, sdate)
-write(iunit,*) sdate
+  CALL MPI_Initialized(mpi_started,iret)
 
-if (fld%nx>9999)  call abor1_ftn("Format too small")
-write(cnx,'(I4)')fld%nx
-fmtn='('//trim(cnx)//fmt1//')'
+  IF (.NOT. mpi_started) CALL MPI_Init(iret)
+  CALL determine_mpi_type_real
 
-DO jf=1,fld%nftot
-  do jy=1,fld%ny
-    write(iunit,fmtn) (fld%gfld(jx,jy,jf), jx=1,fld%nx)
-  enddo
-enddo
+  CALL MPI_Comm_size(MPI_COMM_WORLD,numprocs,iret)
+  CALL MPI_Comm_rank(MPI_COMM_WORLD,nproc,iret)
 
-close(iunit)
+! nproc is process number, numprocs is total number of processes.
 
-return
-end subroutine write_file
+  numprocs_per_tile=numprocs/fld%ntiles
+  numprocself_per_tile=fld%layout_x*fld%layout_y
+  numprocself=fld%ntiles*numprocs_per_tile
+
+  ALLOCATE(gfldg(fld%nxg,fld%nyg,fld%nl))
+
+  gfldg=0.
+
+  color=nproc/numprocs_per_tile
+  key=MOD(nproc,numprocs_per_tile)
+
+  CALL MPI_Comm_split(MPI_COMM_WORLD,color,key,newcomm,iret)
+
+  ioffg=fld%ibeg
+  joffg=fld%jbeg
+
+  DO ifield=1,fld%nf3d
+     
+     IF (key == 0) THEN
+        
+        WRITE(ctile,'(i1)')(color+1)
+        fname=analfile(1:itindex+3)//ctile//analfile(itindex+5:)
+
+        IF (nf90_noerr /= nf90_open(path=TRIM(ADJUSTL(fname)),&
+             &mode=nf90_nowrite,ncid=ncfileid)) &
+             &CALL abor1_ftn("fv3_fields.read_file:stop.1")
+
+        varname=fld%fldnames3d(ifield)
+
+        IF (nf90_noerr /= nf90_inq_varid(ncfileid,TRIM(varname),&
+             &varid=ncvarid)) &
+             &CALL abor1_ftn("fv3_fields.read_file:stop.2"//&
+             &TRIM(varname))
+
+        IF (nf90_noerr /= nf90_inquire_variable(ncid=ncfileid,&
+             &varid=ncvarid,dimids=dimids)) &
+             &CALL abor1_ftn("fv3_fields.read_file:stop.3"//&
+             &TRIM(varname))
+
+        IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(1),&
+             &len = ix)) &
+             &CALL abor1_ftn("fv3_fields.read_file:stop.4"//&
+             &TRIM(varname))
+
+        IF (ix /= fld%nxg ) &
+             &CALL abor1_ftn("fv3_fields.read_file:stop.4.1"//&
+             &TRIM(varname))
+
+        IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(2),&
+             &len = iy)) &
+             &CALL abor1_ftn("fv3_fields.read_file:stop.5"//&
+             &TRIM(varname))
+
+        IF (iy /= fld%nyg ) &
+             &CALL abor1_ftn("fv3_fields.read_file:stop.5.1"//&
+             &TRIM(varname))
+
+        IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(3),&
+             &len = iz)) &
+             &CALL abor1_ftn("fv3_fields.read_file:stop.6"//&
+             &TRIM(varname))
+
+        IF (iz /= fld%nl ) &
+             &CALL abor1_ftn("fv3_fields.read_file:stop.6.1"//&
+             &TRIM(varname))
+
+        IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(4),&
+             &len = it)) &
+             &CALL abor1_ftn("fv3_fields.read_file:stop.7"//&
+             &TRIM(varname))
+
+        IF (it /= 1 ) &
+             &CALL abor1_ftn("fv3_fields.read_file:stop.7.1"//&
+             &TRIM(varname))
+
+     ENDIF
+
+     ioff=(ifield-1)*fld%nl
+
+     CALL MPI_Gather(fld%gfld(:,:,ioff+1:ioff+fld%nl),&
+          &fld%nx*fld%ny*fld%nl,mpi_type_real,&
+          &gfldg(ioffg:ioffg+fld%nx-1,joffg:joffg+fld%ny-1,:),&
+          &fld%nx*fld%ny*fld%nl,mpi_type_real,&
+          &0,newcomm,iret)
+     
+     IF (key == 0) THEN
+        IF (nf90_noerr /= nf90_put_var(ncfileid, ncvarid, gfldg))&
+             &CALL abor1_ftn("fv3_fields.read_file:stop.8")
+     ENDIF
+     
+  ENDDO
+
+  DO ifield=1,fld%nf2d
+     
+     IF (key == 0) THEN
+        
+        varname=fld%fldnames2d(ifield)
+
+        IF (nf90_noerr /= nf90_inq_varid(ncfileid,TRIM(varname),&
+             &varid=ncvarid)) &
+             &CALL abor1_ftn("fv3_fields.read_file:stop.2"//&
+             &TRIM(varname))
+
+        IF (nf90_noerr /= nf90_inquire_variable(ncid=ncfileid,&
+             &varid=ncvarid,dimids=dimids)) &
+             &CALL abor1_ftn("fv3_fields.read_file:stop.3"//&
+             &TRIM(varname))
+
+        IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(1),&
+             &len = ix)) &
+             &CALL abor1_ftn("fv3_fields.read_file:stop.4"//&
+             &TRIM(varname))
+
+        IF (ix /= fld%nxg ) &
+             &CALL abor1_ftn("fv3_fields.read_file:stop.4.1"//&
+             &TRIM(varname))
+
+        IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(2),&
+             &len = iy)) &
+             &CALL abor1_ftn("fv3_fields.read_file:stop.5"//&
+             &TRIM(varname))
+
+        IF (iy /= fld%nyg ) &
+             &CALL abor1_ftn("fv3_fields.read_file:stop.5.1"//&
+             &TRIM(varname))
+
+        IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(3),&
+             &len = it)) &
+             &CALL abor1_ftn("fv3_fields.read_file:stop.6"//&
+             &TRIM(varname))
+
+        IF (it /= 1 ) &
+             &CALL abor1_ftn("fv3_fields.read_file:stop.6.1"//&
+             &TRIM(varname))
+
+     ENDIF
+
+     ioff=ioff+1
+
+     CALL MPI_Gather(fld%gfld(:,:,ioff+1:ioff+1),&
+          &fld%nx*fld%ny,mpi_type_real,&
+          &gfldg(ioffg:ioffg+fld%nx-1,joffg:joffg+fld%ny-1,1),&
+          &fld%nx*fld%ny,mpi_type_real,&
+          &0,newcomm,iret)
+
+     IF (key == 0) THEN
+        IF (nf90_noerr /= nf90_put_var(ncfileid, ncvarid, gfldg(:,:,1)))&
+             &CALL abor1_ftn("fv3_fields.read_file:stop.8")
+     ENDIF
+
+  ENDDO
+
+  IF (key == 0) THEN
+     IF (nf90_noerr /= nf90_close(ncfileid))&
+          &CALL abor1_ftn("fv3_fields.read_file:stop.9")
+  ENDIF
+
+  DEALLOCATE(gfldg)
+
+!  filename = genfilename(c_conf,max_string_length,vdate)
+!  WRITE(buf,*) 'fv3_field:write_file: writing '//filename
+!  CALL log%info(buf)
+!  OPEN(unit=iunit, file=TRIM(fname), form='formatted', action='write')
+!
+!  is=0
+!
+!  WRITE(iunit,*) fld%nx, fld%ny, fld%nl, fld%nftot, is
+!
+!  CALL datetime_to_string(vdate, sdate)
+!  WRITE(iunit,*) sdate
+!
+!  IF (fld%nx>9999)  CALL abor1_ftn("Format too small")
+!  WRITE(cnx,'(I4)')fld%nx
+!  fmtn='('//TRIM(cnx)//fmt1//')'
+!
+!  DO jf=1,fld%nftot
+!     DO jy=1,fld%ny
+!        WRITE(iunit,fmtn) (fld%gfld(jx,jy,jf), jx=1,fld%nx)
+!     ENDDO
+!  ENDDO
+!
+!  CLOSE(iunit)
+!
+  RETURN
+END SUBROUTINE write_file
 
 ! ------------------------------------------------------------------------------
 

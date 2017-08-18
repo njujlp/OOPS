@@ -142,10 +142,12 @@ add_subdirectory( src )
 # Build plugins: The idea is that these become separate builds,
 # which find OOPS as an installed package or subproject
 
-add_subdirectory( l95 )
-add_subdirectory( qg )
+#add_subdirectory( l95 )
+#add_subdirectory( qg )
+#add_subdirectory( ModelX )
 
-add_subdirectory( ModelX )
+add_subdirectory( fv3 )
+
 
 ecbuild_dont_pack ( FILES .pydevproject .project .cproject oops.sublime-project )
 ecbuild_dont_pack ( FILES .settings tools l95/tools qg/scripts )

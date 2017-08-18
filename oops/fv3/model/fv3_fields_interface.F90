@@ -381,7 +381,7 @@ call fldrms(fld, zz)
 
 CALL MPI_allreduce(zz,prms,1,mpi_type_real,mpi_sum,mpi_comm_world,iret)
 
-prms=SQRT(prms/(REAL(fld%nftot*fld%nyg*fld%nxg,kind_real)))
+prms=SQRT(prms/(REAL(fld%nftot*fld%nyg*fld%nxg*fld%ntiles,kind_real)))
 
 end subroutine fv3_field_rms_c
 

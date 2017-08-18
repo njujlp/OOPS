@@ -4,37 +4,41 @@
 #cd OOPS
 
 # enable modules
-source /glade/u/apps/ch/opt/lmod/7.2.1/lmod/lmod/init/tcsh
+#source /glade/u/apps/ch/opt/lmod/7.2.1/lmod/lmod/init/tcsh
 # reset all modules
-module purge
+#module purge
 # reset the library path
-unsetenv LD_LIBRARY_PATH
+#unsetenv LD_LIBRARY_PATH
 
 # Load modules
-module load gnu cmake/3.7.2 netcdf
-module list
+#module load gnu cmake/3.7.2 
+#module load gnu cmake/3.7.2 netcdf
+#module list
+
+source ~/.oops
 
 # Define lapack path
-setenv LAPACK_PATH /glade/p/ral/nsap/jcsda/code/lapack-3.7.0
-setenv LAPACK_DIR  $LAPACK_PATH
-setenv LAPACK_LIBRARIES "$LAPACK_PATH/lib64/liblapack.a;$LAPACK_PATH/lib64/libblas.a"
+#setenv LAPACK_PATH /glade/p/ral/nsap/jcsda/code/lapack-3.7.0
+#setenv LAPACK_DIR  $LAPACK_PATH
+#setenv LAPACK_LIBRARIES "$LAPACK_PATH/lib64/liblapack.a;$LAPACK_PATH/lib64/libblas.a"
 
 # Need eigen3 library
-setenv EIGEN3_INCLUDE_DIR /glade/p/ral/nsap/jcsda/code/eigen/build
+#setenv EIGEN3_INCLUDE_DIR /glade/p/ral/nsap/jcsda/code/eigen/build
 
 # Need boost library
-setenv BOOST_ROOT /glade/p/ral/nsap/jcsda/code/boost_1_64_0
+#setenv BOOST_ROOT /glade/p/ral/nsap/jcsda/code/boost_1_64_0
 
-# Need ESMF library
-# setenv ESMF_PATH /glade/p/work/svasquez/esmf_install/esmf_710bs33_gnu_openmpi_netcdf_O
-# setenv ESMF_LIBRARIES ${ESMF_PATH}/lib/libO/Linux.gfortran.64.openmpi.default/libesmf.a
-# setenv ESMF_INCLUDE_DIR ${ESMF_PATH}/mod/modO/Linux.gfortran.64.openmpi.default
-
-# Need NETCDF library
-setenv NETCDF_LIBRARIES "${NETCDF}/lib/libnetcdf.a;${NETCDF}/lib/libnetcdff.a"
+#Need ESMF library
+#setenv ESMF_PATH /glade/p/work/svasquez/esmf_install/esmf_710bs33_gnu_openmpi_netcdf_O
+#setenv ESMF_LIBRARIES ${ESMF_PATH}/lib/libO/Linux.gfortran.64.openmpi.default/libesmf.a
+#setenv ESMF_INCLUDE_DIR ${ESMF_PATH}/mod/modO/Linux.gfortran.64.openmpi.default
 
 # Need proper openmpi binaries
-setenv OPENMPI_BINDIR "/glade/p/work/xinzhang/common_libs/bin"
+#setenv OPENMPI_BINDIR "/glade/p/work/xinzhang/common_libs/bin"
+
+#Need NETCDF library
+#setenv NETCDF_LIBRARIES "${NETCDF}/lib/libnetcdf.a;${NETCDF}/lib/libnetcdff.a"
+
 
 setenv SRC $PWD
 setenv BUILD ${SRC}/build

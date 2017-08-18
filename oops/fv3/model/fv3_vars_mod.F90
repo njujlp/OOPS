@@ -26,7 +26,7 @@ end type fv3_vars
 #define LISTED_TYPE fv3_vars
 
 !> Linked list interface - defines registry_t type
-#include "linkedList_i.f"
+#include "util/linkedList_i.f"
 
 !> Global registry
 type(registry_t) :: fv3_vars_registry
@@ -35,7 +35,7 @@ type(registry_t) :: fv3_vars_registry
 contains
 ! ------------------------------------------------------------------------------
 !> Linked list implementation
-#include "linkedList_c.f"
+#include "util/linkedList_c.f"
 
 ! ------------------------------------------------------------------------------
 

@@ -16,18 +16,20 @@
     "variables3d": "ucomp,vcomp,temp,sphum",
     "variables2d": " ",
     "bckgfile": "/glade/p/work/mariusz/fv3_ensemble/2015081006/OUTPUT_FV3/mem001/20150810060000.fv3_history.tile?.nc",
-    "ihisttime": "7",
+    "ihisttime": "4",
+    "analfile": "/glade/p/work/mariusz/fv3_ensemble/2015081006/OUTPUT_JEDI/mem001/anal.tile?.nc",
     "date": "2015-08-10T06:00:00Z",
-    "norm": "306.656944",
+    "norm": "125.192173",
     "tolerance": "0.005"
   },
   "StateTest": {
     "variables3d": "ucomp,vcomp,temp,sphum",
     "variables2d": " ",
     "bckgfile": "/glade/p/work/mariusz/fv3_ensemble/2015081006/OUTPUT_FV3/mem001/20150810060000.fv3_history.tile?.nc",
-    "ihisttime": "7",
+    "ihisttime": "4",
+    "analfile": "/glade/p/work/mariusz/fv3_ensemble/2015081006/OUTPUT_JEDI/mem001/anal.tile?.nc",
     "date": "2015-08-10T06:00:00Z",
-    "norm": "306.656944",
+    "norm": "125.192173",
     "tolerance": "0.005"
   }
 }
