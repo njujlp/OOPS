@@ -230,7 +230,7 @@ do il0i=1,ndata%nl0i
    ndata%v(il0i)%n_src = ndata%nl1
    ndata%v(il0i)%n_dst = ndata%nl0
 
-   if (ndata%nl0i==1) then
+   if (.true..and.(ndata%nl0i==1)) then
       ! Copy basic vertical interpolation
       ndata%v(il0i)%n_s = vbase%n_s
       call linop_alloc(ndata%v(il0i))

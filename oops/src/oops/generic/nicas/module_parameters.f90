@@ -140,7 +140,7 @@ do il0=1,ndata%nl0
    else
       ! Compute normalized distance with level il0_prev
       distnorm = abs(ndata%vunit(il0)-ndata%vunit(il0_prev))/sqrt(0.5*(minval(rv1(:,il0))**2+minval(rv1(:,il0_prev))**2))
-      ndata%llev(il0) = distnorm>1.0/nam%resol
+      ndata%llev(il0) = .true. !distnorm>1.0/nam%resol
    end if
 
    ! Update
@@ -304,7 +304,7 @@ type(meshtype) :: mesh
 
 ! Create mesh
 if ((.not.allocated(ndata%area)).or.nam%mask_check.or.nam%network) &
- & call create_mesh(ndata%rng,ndata%nc0,ndata%lon,ndata%lat,.false.,mesh)
+ & call create_mesh(ndata%rng,ndata%nc0,ndata%lon,ndata%lat,.true.,mesh)
 
 if (.not.allocated(ndata%area)) then
    ! Allocation
@@ -383,16 +383,6 @@ end if
 
 
 if (nam%network) then
-   ! Compute distances
-   allocate(ndata%net_dnb(maxval(ndata%net_nnb),ndata%nc0))
-   do ic0=1,ndata%nc0
-      do i=1,ndata%net_nnb(ic0)
-         call sphere_dist(ndata%lon(ic0),ndata%lat(ic0),ndata%lon(ndata%net_inb(i,ic0)), &
-       & ndata%lat(ndata%net_inb(i,ic0)),ndata%net_dnb(i,ic0))
-         ndata%net_dnb(i,ic0) = (ndata%net_dnb(i,ic0)/req)**2
-      end do
-   end do
-
    if (.not.allocated(ndata%net_nnb)) then
       ! Allocation
       allocate(ndata%net_nnb(ndata%nc0))
@@ -433,6 +423,16 @@ if (nam%network) then
          end if
       end do
    end if
+
+   ! Compute distances
+   allocate(ndata%net_dnb(maxval(ndata%net_nnb),ndata%nc0))
+   do ic0=1,ndata%nc0
+      do i=1,ndata%net_nnb(ic0)
+         call sphere_dist(ndata%lon(ic0),ndata%lat(ic0),ndata%lon(ndata%net_inb(i,ic0)), &
+       & ndata%lat(ndata%net_inb(i,ic0)),ndata%net_dnb(i,ic0))
+         ndata%net_dnb(i,ic0) = (ndata%net_dnb(i,ic0)/req)**2
+      end do
+   end do
 end if
 
 end subroutine compute_grid_mesh

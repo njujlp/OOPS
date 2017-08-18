@@ -130,7 +130,8 @@ end do
 ! Vertical interpolation
 !$omp parallel do private(ic1b)
 do ic1b=1,ndataloc%nc1b
-   call apply_linop(ndataloc%v(ndataloc%vbot(ic1b)),gamma(ic1b,:),delta(ic1b,:))
+   !call apply_linop(ndataloc%v(ndataloc%vbot(ic1b)),gamma(ic1b,:),delta(ic1b,:))
+   delta(ic1b,:) = gamma(ic1b,:)
 end do
 !$omp end parallel do
 
@@ -233,7 +234,8 @@ end do
 ! Vertical interpolation
 !$omp parallel do private(ic1b)
 do ic1b=1,ndataloc%nc1b
-   call apply_linop_ad(ndataloc%v(ndataloc%vbot(ic1b)),delta(ic1b,:),gamma(ic1b,:))
+   !call apply_linop_ad(ndataloc%v(ndataloc%vbot(ic1b)),delta(ic1b,:),gamma(ic1b,:))
+   gamma(ic1b,:) = delta(ic1b,:) 
 end do
 !$omp end parallel do
 
