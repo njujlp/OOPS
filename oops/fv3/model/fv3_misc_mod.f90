@@ -9,13 +9,14 @@ MODULE fv3_misc_mod
   PUBLIC :: mpp_compute_extent,namelist_fv3,get_varnames,&
        &determine_mpi_type_real
   PUBLIC :: max_string_length,nc_maxdims,&
-       &lonname,latname,varseparator
+       &lonname,latname,areaname,varseparator
   PUBLIC :: mpi_type_real
 
   INTEGER, PARAMETER :: max_string_length=500, nc_maxdims=4
   CHARACTER(len=1),PARAMETER :: varseparator=','
   CHARACTER(len=NF90_MAX_NAME), PARAMETER :: lonname="grid_lont"
   CHARACTER(len=NF90_MAX_NAME), PARAMETER :: latname="grid_latt"
+  CHARACTER(len=NF90_MAX_NAME), PARAMETER :: areaname="area"
 
   INTEGER :: mpi_type_real
 

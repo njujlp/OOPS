@@ -33,6 +33,7 @@ type :: fv3_geom
   INTEGER :: jbeg 
   REAL(kind=kind_real), ALLOCATABLE, DIMENSION(:,:) :: lon
   REAL(kind=kind_real), ALLOCATABLE, DIMENSION(:,:) :: lat
+  REAL(kind=kind_real), ALLOCATABLE, DIMENSION(:,:) :: area
 
 end type fv3_geom
 
@@ -61,7 +62,7 @@ type(fv3_geom), pointer :: self
 
 INTEGER :: itile,iproc,itindex,ix,iy,ndivs,i,j,k
 CHARACTER(len=max_string_length) :: fname,namelistfile
-REAL(kind=kind_real), ALLOCATABLE, DIMENSION(:,:) :: long, latg
+REAL(kind=kind_real), ALLOCATABLE, DIMENSION(:,:) :: long, latg, areag
 INTEGER, ALLOCATABLE, DIMENSION(:) :: ibegg,iendg,jbegg,jendg
 INTEGER, ALLOCATABLE, DIMENSION(:,:) :: begindex
 
@@ -137,12 +138,14 @@ DO j=1,self%layout_y
    ENDDO
 ENDDO
 
-ALLOCATE(long(self%nxg,self%nyg),latg(self%nxg,self%nyg))
+ALLOCATE(long(self%nxg,self%nyg),latg(self%nxg,self%nyg),&
+     &areag(self%nxg,self%nyg))
 
 self%nx=iendg(1)-ibegg(1)+1
 self%ny=jendg(1)-jbegg(1)+1
 
-ALLOCATE(self%lon(self%nx,self%ny),self%lat(self%nx,self%ny))
+ALLOCATE(self%lon(self%nx,self%ny),self%lat(self%nx,self%ny),&
+     &self%area(self%nx,self%ny))
 
 color=nproc/numprocs_per_tile
 key=MOD(nproc,numprocs_per_tile)
@@ -183,8 +186,16 @@ IF (key == 0) THEN
         &varid=ncvarid)) &
         &CALL abor1_ftn("fv3_geom_mod:stop.8")
 
+   IF (nf90_noerr /= nf90_inq_varid(ncfileid,TRIM(areaname),&
+        &varid=ncvarid)) &
+        &CALL abor1_ftn("fv3_geom_mod:stop.8")
+
    IF (nf90_noerr /= nf90_get_var(ncfileid, ncvarid, latg)) &
         &CALL abor1_ftn("fv3_geom_mod:stop.9")
+
+   IF (nf90_noerr /= nf90_get_var(ncfileid, ncvarid, areag)) &
+        &CALL abor1_ftn("fv3_geom_mod:stop.9")
+   
 
 ENDIF
 
@@ -192,6 +203,7 @@ CALL MPI_Comm_split(MPI_COMM_WORLD,color,key,newcomm,iret)
 
 CALL MPI_Bcast(long,self%nxg*self%nyg,mpi_type_real,0,newcomm,iret)
 CALL MPI_Bcast(latg,self%nxg*self%nyg,mpi_type_real,0,newcomm,iret)
+CALL MPI_Bcast(areag,self%nxg*self%nyg,mpi_type_real,0,newcomm,iret)
 
 !PRINT *,nproc,color,MINVAL(long),MAXVAL(long),MINVAL(latg),MAXVAL(latg)
 
@@ -200,11 +212,12 @@ self%jbeg=begindex(key+1,2)
 
 self%lon=long(self%ibeg:self%ibeg+self%nx-1,self%jbeg:self%jbeg+self%ny-1)
 self%lat=latg(self%ibeg:self%ibeg+self%nx-1,self%jbeg:self%jbeg+self%ny-1)
+self%area=areag(self%ibeg:self%ibeg+self%nx-1,self%jbeg:self%jbeg+self%ny-1)
 self%itile=color+1
 self%pe=nproc
 
 DEALLOCATE(begindex)
-DEALLOCATE(long,latg)   
+DEALLOCATE(long,latg,areag)   
 
 CALL MPI_Barrier(MPI_COMM_WORLD,iret)
 !CALL MPI_Finalize(iret)
@@ -238,6 +251,7 @@ other%ibeg = self%ibeg
 other%jbeg = self%jbeg
 other%lon = self%lon
 other%lat = self%lat
+other%area = self%area
 
 end subroutine c_fv3_geo_clone
 
@@ -252,6 +266,7 @@ TYPE(fv3_geom), pointer :: self
 CALL fv3_geom_registry%get(c_key_self , self )
 if (allocated(self%lon)) deallocate(self%lon)
 if (allocated(self%lat)) deallocate(self%lat)
+if (allocated(self%area)) deallocate(self%area)
 call fv3_geom_registry%remove(c_key_self)
 
 end subroutine c_fv3_geo_delete

@@ -1,4 +1,3 @@
-
 !> Handle fields for the QG model
 
 module fv3_fields
@@ -42,6 +41,7 @@ type :: fv3_field
   integer :: ny
   INTEGER :: ibeg
   INTEGER :: jbeg
+  TYPE(fv3_geom), POINTER :: geom
 
   REAL(kind=kind_real), POINTER :: gfld(:,:,:)    !< 3D+2D fields
 
@@ -96,6 +96,8 @@ IF (self%nf2d > 0) THEN
    ALLOCATE(self%fldnames2d(self%nf2d))
    self%fldnames2d(:)=vars%fldnames2d(:)
 ENDIF
+
+self%geom => geom
 
 call check(self)
 
@@ -943,6 +945,69 @@ bad = bad .OR. (SIZE(self%gfld, 3) /= self%nftot)
 IF (bad) CALL abor1_ftn("fv3_fields.bad.4")
 
 END SUBROUTINE check
+
+! ------------------------------------------------------------------------------
+
+subroutine convert_to_ug(self, ug)
+use unstructured_grid_mod
+implicit none
+type(fv3_field), intent(in) :: self
+type(unstructured_grid), intent(inout) :: ug
+real(kind=kind_real) :: zz(self%nl)
+integer :: jx,jy,jl,jf,joff,j
+integer :: cmask(self%nl)
+
+do jl=1,self%nl
+  zz(jl) = real(jl,kind=kind_real)
+enddo
+call create_unstructured_grid(ug, self%nl, zz)
+
+cmask = 1
+do jy=1,self%geom%ny
+  do jx=1,self%geom%nx
+    call add_column(ug, self%geom%lat(jy), self%geom%lon(jx), self%geom%area(jx,jy), self%nl, self%nf3d, 0, cmask, 1)
+    j = 0
+    do jf=1,self%nf3d
+      joff = (jf-1)*self%nl
+      do jl=1,self%nl
+         j = j+1
+         ug%last%column%cols(j) = self%gfld(jx,jy,joff+jl)
+      enddo
+    enddo
+  enddo
+enddo
+
+end subroutine convert_to_ug
+
+! ------------------------------------------------------------------------------
+
+subroutine convert_from_ug(self, ug)
+use unstructured_grid_mod
+implicit none
+type(fv3_field), intent(inout) :: self
+type(unstructured_grid), intent(in) :: ug
+type(column_element), pointer :: current
+integer :: jx,jy,jl,jf,joff,j
+
+current => ug%head
+do jy=1,self%geom%ny
+  do jx=1,self%geom%nx
+    j = 0
+    do jf=1,self%nf3d
+      joff = (jf-1)*self%nl
+      do jl=1,self%nl
+         j = j+1
+         self%gfld(jx,jy,joff+jl) = current%column%cols(j)
+      enddo
+    enddo
+    current => current%next
+  enddo
+enddo
+
+end subroutine convert_from_ug
+
+! ------------------------------------------------------------------------
+
 
 ! ------------------------------------------------------------------------------
 
