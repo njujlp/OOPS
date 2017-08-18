@@ -975,76 +975,6 @@ end subroutine dirac
 
 ! ------------------------------------------------------------------------------
 
-subroutine convert_to_ug_qg(self, ug)
-
-use unstructured_grid_mod
-implicit none
-type(wrf_field), intent(in) :: self
-type(unstructured_grid), intent(inout) :: ug
-real(kind=kind_real) :: zz(self%nz)
-integer :: jx,jy,jl,jf,joff,jz,j
-integer :: cmask(self%nz)
-
-do jl=1,self%nz
-  zz(jl) = real(jl,kind=kind_real)
-enddo
-
-call create_unstructured_grid(ug, self%nz, zz)
-
-cmask = 1
-do jy=1,self%ny
-
-  do jx=1,self%nx
-
-    call add_column(ug, self%geom%lat(jx,jy), self%geom%lon(jx,jy), self%nz, self%nf, 0, cmask, 1)
-    j = 0
-
-!   do jf=1,self%nf
-!     joff = (jf-1)*self%nz
-
-      do jz=1,self%nz
-         j = j+1
-         ug%last%column%cols(j) = self%gfld3d(jx,jy,joff+jz)
-      enddo ! jl
-
-    enddo ! jf
-
-! enddo ! jx
-
-enddo ! jy
-
-end subroutine convert_to_ug_qg
-
-! ------------------------------------------------------------------------------
-
-subroutine convert_from_ug_qg(self, ug)
-
-use unstructured_grid_mod
-implicit none
-type(wrf_field), intent(inout) :: self
-type(unstructured_grid), intent(in) :: ug
-type(column_element), pointer :: current
-integer :: jx,jy,jl,jf,joff,j
-
-current => ug%head
-do jy=1,self%ny
-  do jx=1,self%nx
-    j = 0
-    do jf=1,self%nf
-      joff = (jf-1)*self%nz
-      do jl=1,self%nz
-         j = j+1
-         self%gfld3d(jx,jy,joff+jl) = current%column%cols(j)
-      enddo
-    enddo
-    current => current%next
-  enddo
-enddo
-
-end subroutine convert_from_ug_qg
-
-! ------------------------------------------------------------------------------
-
   subroutine convert_to_ug(self, ug)
 
     use unstructured_grid_mod
@@ -1055,6 +985,8 @@ end subroutine convert_from_ug_qg
     real(kind=kind_real), allocatable :: zz(:)
     real(kind=kind_real), allocatable :: vv(:)
     integer, allocatable :: cmask(:)
+    real(kind=kind_real)  :: area
+    real(kind=kind_real)  :: zero = 0.
     integer :: jx,jy,jz,jk
     integer :: nz_total     ! Total number of levels in the 3D fields
     integer :: n_vars       ! Number of 3D variables 
@@ -1063,6 +995,9 @@ end subroutine convert_from_ug_qg
 !> code convert_to_ug
 
     print *,'in convert to ug ............'
+
+!> Need the grid box area in m2
+   area = self%geom%DX * self%geom%DY
 
 !> Start with only one var
     n_vars = 1      
@@ -1105,6 +1040,7 @@ end subroutine convert_from_ug_qg
 !      write(*,*) 'Processing point ',self%geom%lon(jx,jy),'E, ',self%geom%lat(1,jy),'N'
 !> Add the point on the unstructured grid
           call add_column(ug, self%geom%lat(jx,jy), self%geom%lon(jx,jy), &
+               area, &
                nz_total, &
                n_vars, &
                n_surf_vars, &
