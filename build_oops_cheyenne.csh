@@ -50,3 +50,10 @@ ecbuild --build=debug -DCMAKE_CXX_COMPILER=${OPENMPI_BINDIR}/mpicxx -DCMAKE_C_CO
 make VERBOSE=1 -j4
 
 exit 0
+
+# The following is needed at runtime (e.g. before running ctest in build/oops/) on cheyenne:
+   unsetenv LD_LIBRARY_PATH
+   module purge
+   module load gnu cmake/3.7.2 netcdf
+   setenv BOOST_ROOT /glade/p/ral/nsap/jcsda/code/boost_1_64_0
+   setenv LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${BOOST_ROOT}/stage/lib"
