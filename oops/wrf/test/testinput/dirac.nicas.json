@@ -9,11 +9,6 @@
   "variables": {
     "variables": "ci"
   },
-  "model": {
-    "tstep": "PT1H",
-    "top_layer_depth": "5500.0",
-    "bottom_layer_depth": "4500.0"
-  },
   "initial": {
      "filename" : "/glade/p/ral/nsap/jcsda/data/wrf/data/2017072800/wrfout_d01_2017-07-28_06:00:00.001",
     "date": "2017-07-28T00:00:00Z"
@@ -28,7 +23,7 @@
     "localization": {
       "localization": "NICAS",
       "datadir": ".",
-      "prefix": "qg",
+      "prefix": "wrf",
       "colorlog": 0,
       "model": "oops",
       "nl": 2,
@@ -51,7 +46,7 @@
       "latdir(3)": 21.7,
       "sam_default_seed": 1,
       "mask_check": 0,
-      "ntry": 30,
+      "ntry": 3,
       "nrep": 2,
       "logpres": 0,
       "lsqrt": 0,
@@ -61,7 +56,7 @@
       "Lbv_file": "none",
       "Lbv(1)": 0.4,
       "Lbv(2)": 0.4,
-      "resol": 12.0,
+      "resol": 6.0,
       "network": 0,
       "nproc": 1,
       "mpicom": 2

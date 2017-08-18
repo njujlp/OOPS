@@ -959,23 +959,30 @@ if ((ifdir<1).or.(ifdir>self%nf)) call abor1_ftn("wrf_fields:dirac invalid ifdir
 
 ! Setup Diracs
 call zeros(self)
+
 ioff = (ifdir-1)*self%nz
+
 do idir=1,ndir
+!  self%P(ixdir(idir),iydir(idir),ioff+ildir) = 1.0
+!  self%H(ixdir(idir),iydir(idir),ioff+ildir) = 1.0
    self%T(ixdir(idir),iydir(idir),ioff+ildir) = 1.0
+   self%Q(ixdir(idir),iydir(idir),ioff+ildir) = 1.0
+   self%U(ixdir(idir),iydir(idir),ioff+ildir) = 1.0
+   self%V(ixdir(idir),iydir(idir),ioff+ildir) = 1.0
  end do
 
 end subroutine dirac
 
 ! ------------------------------------------------------------------------------
 
-subroutine convert_to_ug(self, ug)
+subroutine convert_to_ug_qg(self, ug)
 
 use unstructured_grid_mod
 implicit none
 type(wrf_field), intent(in) :: self
 type(unstructured_grid), intent(inout) :: ug
 real(kind=kind_real) :: zz(self%nz)
-integer :: jx,jy,jl,jf,joff,j
+integer :: jx,jy,jl,jf,joff,jz,j
 integer :: cmask(self%nz)
 
 do jl=1,self%nz
@@ -986,24 +993,31 @@ call create_unstructured_grid(ug, self%nz, zz)
 
 cmask = 1
 do jy=1,self%ny
+
   do jx=1,self%nx
+
     call add_column(ug, self%geom%lat(jx,jy), self%geom%lon(jx,jy), self%nz, self%nf, 0, cmask, 1)
     j = 0
-    do jf=1,self%nf
-      joff = (jf-1)*self%nz
-      do jl=1,self%nz
-         j = j+1
-         ug%last%column%cols(j) = self%gfld3d(jx,jy,joff+jl)
-      enddo
-    enddo
-  enddo
-enddo
 
-end subroutine convert_to_ug
+!   do jf=1,self%nf
+!     joff = (jf-1)*self%nz
+
+      do jz=1,self%nz
+         j = j+1
+         ug%last%column%cols(j) = self%gfld3d(jx,jy,joff+jz)
+      enddo ! jl
+
+    enddo ! jf
+
+! enddo ! jx
+
+enddo ! jy
+
+end subroutine convert_to_ug_qg
 
 ! ------------------------------------------------------------------------------
 
-subroutine convert_from_ug(self, ug)
+subroutine convert_from_ug_qg(self, ug)
 
 use unstructured_grid_mod
 implicit none
@@ -1027,7 +1041,131 @@ do jy=1,self%ny
   enddo
 enddo
 
-end subroutine convert_from_ug
+end subroutine convert_from_ug_qg
+
+! ------------------------------------------------------------------------------
+
+  subroutine convert_to_ug(self, ug)
+
+    use unstructured_grid_mod
+
+    implicit none
+    type(wrf_field), intent(in) :: self
+    type(unstructured_grid), intent(inout) :: ug
+    real(kind=kind_real), allocatable :: zz(:)
+    real(kind=kind_real), allocatable :: vv(:)
+    integer, allocatable :: cmask(:)
+    integer :: jx,jy,jz,jk
+    integer :: nz_total     ! Total number of levels in the 3D fields
+    integer :: n_vars       ! Number of 3D variables 
+    integer :: n_surf_vars  ! Number of surf vars (sould be 0 for ocean/ice)
+
+!> code convert_to_ug
+
+    print *,'in convert to ug ............'
+
+!> Start with only one var
+    n_vars = 1      
+!> No surface var
+    n_surf_vars = 0 
+
+    nz_total = self%nz
+
+!> Allocate memory for 3d fields
+    allocate(zz(nz_total))
+    allocate(vv(nz_total))
+    allocate(cmask(nz_total))
+
+!> Load vertical level distribution
+    do jz = 1,nz_total
+       zz(jz) = real(self%geom%levs(jz))
+    end do
+
+!> Create an ustructured grid 
+    call create_unstructured_grid(ug, nz_total, zz)
+
+!> Loop on horizontal dimensions
+    do jy=1,self%ny
+
+!      write(*,*) 'Processing latitude ',self%geom%lat(1,jy)
+
+       do jx=1,self%nx
+
+!> Initialise counter
+          jk = 1
+
+!> Load first variable T
+          do jz = 1,self%nz                            ! T
+!            cmask(jk) = int(self%geom%mask(jx,jy))    ! Do not use land mask
+             cmask(jk) = 1
+             vv(jk) = self%T(jx,jy,jz)
+             jk = jk + 1
+          end do
+
+!      write(*,*) 'Processing point ',self%geom%lon(jx,jy),'E, ',self%geom%lat(1,jy),'N'
+!> Add the point on the unstructured grid
+          call add_column(ug, self%geom%lat(jx,jy), self%geom%lon(jx,jy), &
+               nz_total, &
+               n_vars, &
+               n_surf_vars, &
+               cmask, &
+               0)
+          ug%last%column%cols(:) = vv(:)
+
+       enddo
+    enddo
+
+    deallocate(zz)
+    deallocate(vv)
+    deallocate(cmask)
+
+  return
+  end subroutine convert_to_ug
+
+! -----------------------------------------------------------------------------
+
+  subroutine convert_from_ug(self, ug)
+
+    use unstructured_grid_mod
+
+    implicit none
+    type(wrf_field), intent(inout) :: self
+    type(unstructured_grid), intent(in) :: ug
+    type(column_element), pointer :: current
+    real(kind=kind_real) :: dx, dy
+    integer :: jx,jy,jz,jk
+    integer :: n_vars       ! Number of 3D variables 
+    integer :: n_surf_vars  ! Number of surf vars (sould be 0 for ocean/ice)
+
+!> convert_from_ug: code inverse of convert_to_ug
+
+    print *,'in convert from ug ............'
+
+!> Start with only one var
+    n_vars = 1      
+!> No surface var
+    n_surf_vars = 0
+
+    current => ug%head
+
+!> Loop over horizontal grid
+    do jy=1,self%ny
+       do jx=1,self%nx
+
+!> initialize counter
+          jk = 1
+
+          do jz = 1,self%nz                                          ! T
+             self%T(jx,jy,jz) = current%column%cols(jk)
+             jk = jk + 1
+          end do
+
+          current => current%next
+       enddo
+    enddo
+
+  return
+  end subroutine convert_from_ug
 
 ! ------------------------------------------------------------------------------
 
