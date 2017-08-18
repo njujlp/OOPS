@@ -74,7 +74,7 @@ do il0=1,ndata%nl0
 end do
 
 ! Normalized area
-ndata%area = areas/req**2
+ndata%area = sum(areas)/(float(ndata%nc0)*req**2)
 
 ! Vertical unit
 ndata%vunit = levs
