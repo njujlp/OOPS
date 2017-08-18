@@ -75,7 +75,7 @@ select case (trim(svar))
 case ("reconstructed_winds")
   self%nv = 5
   self%lbc = .false.
-  allocate(self%fldnames(4))
+  allocate(self%fldnames(self%nv))
 !  self%fldnames(:) = (/"theta","rho","qv","uReconstructZonal","uReconstructMeridional"/)
   self%fldnames(1) = "theta"
   self%fldnames(2) = "rho"
@@ -85,7 +85,7 @@ case ("reconstructed_winds")
 case ("normal_speed")
   self%nv = 4
   self%lbc = .false.
-  allocate(self%fldnames(4))
+  allocate(self%fldnames(self%nv))
   !self%fldnames(:) = (/"theta","rho","qv","u"/)
   self%fldnames(1) = "theta"
   self%fldnames(2) = "rho"
@@ -94,7 +94,7 @@ case ("normal_speed")
 case ("onevar")
   self%nv = 1
   self%lbc = .false.
-  allocate(self%fldnames(1))
+  allocate(self%fldnames(self%nv))
   self%fldnames(1) = "theta"
 case default
   call abor1_ftn("c_mpas_vars_create: undefined variables")
