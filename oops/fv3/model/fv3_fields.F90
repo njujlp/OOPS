@@ -17,7 +17,7 @@ public :: fv3_field, &
         & self_add, self_schur, self_sub, self_mul, axpy, &
         & dot_prod, add_incr, diff_incr, &
         & read_file, write_file, gpnorm, fldrms, &
-        & change_resol
+        & change_resol, convert_to_ug, convert_from_ug
 public :: fv3_field_registry
 
 ! ------------------------------------------------------------------------------
@@ -66,7 +66,7 @@ contains
 SUBROUTINE create(self, geom, vars)
 implicit none
 type(fv3_field), intent(inout) :: self
-type(fv3_geom),  intent(in)    :: geom
+TYPE(fv3_geom), POINTER,  INTENT(in)    :: geom
 type(fv3_vars),  intent(in)    :: vars
 
 self%nxg = geom%nxg
@@ -965,7 +965,8 @@ call create_unstructured_grid(ug, self%nl, zz)
 cmask = 1
 do jy=1,self%geom%ny
   do jx=1,self%geom%nx
-    call add_column(ug, self%geom%lat(jy), self%geom%lon(jx), self%geom%area(jx,jy), self%nl, self%nf3d, 0, cmask, 1)
+    CALL add_column(ug, self%geom%lat(jx,jy), self%geom%lon(jx,jy), &
+         &self%geom%area(jx,jy), self%nl, self%nf3d, 0, cmask, 1)
     j = 0
     do jf=1,self%nf3d
       joff = (jf-1)*self%nl

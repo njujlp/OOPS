@@ -405,3 +405,40 @@ nf2d = fld%nf2d
 end subroutine fv3_fieldnum_c
 
 ! ------------------------------------------------------------------------------
+
+subroutine fv3_field_convert_to_c(c_key_fld, c_key_ug) bind (c,name='fv3_field_convert_to_f90')
+use iso_c_binding
+use fv3_fields
+use unstructured_grid_mod
+implicit none
+integer(c_int), intent(in) :: c_key_fld
+integer(c_int), intent(in) :: c_key_ug
+type(fv3_field), pointer :: fld
+type(unstructured_grid), pointer :: ug
+
+call fv3_field_registry%get(c_key_fld,fld)
+call unstructured_grid_registry%get(c_key_ug,ug)
+
+call convert_to_ug(fld, ug)
+
+end subroutine fv3_field_convert_to_c
+! ------------------------------------------------------------------------------
+subroutine fv3_field_convert_from_c(c_key_fld, c_key_ug) bind (c,name='fv3_field_convert_from_f90')
+use iso_c_binding
+use fv3_fields
+use unstructured_grid_mod
+implicit none
+integer(c_int), intent(in) :: c_key_fld
+integer(c_int), intent(in) :: c_key_ug
+type(fv3_field), pointer :: fld
+type(unstructured_grid), pointer :: ug
+
+call fv3_field_registry%get(c_key_fld,fld)
+call unstructured_grid_registry%get(c_key_ug,ug)
+
+call convert_from_ug(fld, ug)
+
+end subroutine fv3_field_convert_from_c
+! ------------------------------------------------------------------------------
+
+
