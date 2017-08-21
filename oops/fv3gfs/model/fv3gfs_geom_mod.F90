@@ -5,7 +5,14 @@ module fv3gfs_geom_mod
 
 use iso_c_binding
 use config_mod
-use mpp_domains_mod, only: domain2D
+
+use mpp_mod,         only: mpp_pe, mpp_npes
+use mpp_mod,         only: mpp_error, FATAL
+use mpp_domains_mod, only: mpp_domains_set_stack_size
+use mpp_domains_mod, only: domain2D, mpp_define_layout, mpp_define_mosaic
+use mpp_domains_mod, only: mpp_define_io_domain
+use mpp_domains_mod, only: mpp_get_compute_domain, mpp_get_data_domain
+use mpp_domains_mod, only: mpp_copy_domain, mpp_deallocate_domain
 
 implicit none
 private
@@ -35,12 +42,11 @@ implicit none
 integer(c_int), intent(inout) :: c_key_self
 type(c_ptr), intent(in)    :: c_conf
 
-integer, parameter :: max_string_length=80 ! Yuk!
 type(domain2D), pointer :: self
-character(len=max_string_length) :: gtype
+character(len=32) :: gtype = 'unknown'
 integer :: nx, ny, ntile, halo
 integer :: layout_in(2) = (/4,2/)
-integer :: io_layout(2) = (/2,2/)
+integer :: io_layout(2) = (/1,1/)
 integer :: halo = 1
 integer                              :: pe, npes, npes_per_tile, tile
 integer                              :: num_contact
@@ -106,8 +112,8 @@ endif
   num_contact = 0
 
   call mpp_define_mosaic(global_indices, layout2D, self, ntiles, num_contact, tile1, tile2, &
-                         istart1, iend1, jstart1, jend1, istart2, iend2, jstart2, jend2,      &
-                         pe_start, pe_end, whalo=halo, ehalo=halo, shalo=halo, nhalo=halo,    &
+                         istart1, iend1, jstart1, jend1, istart2, iend2, jstart2, jend2,    &
+                         pe_start, pe_end, whalo=halo, ehalo=halo, shalo=halo, nhalo=halo,  &
                          name=gtype)
 
   if (io_layout(1) /= 1 .or. io_layout(2) /= 1) &
@@ -134,9 +140,8 @@ call fv3gfs_geom_registry%add(c_key_other)
 call fv3gfs_geom_registry%get(c_key_other, other)
 call fv3gfs_geom_registry%get(c_key_self , self)
 
-self = other
-! or
-call copy_geom(other, self)
+! copy self to other
+call mpp_copy_domain(self, other)
 
 end subroutine c_fv3gfs_geo_clone
 
@@ -145,10 +150,13 @@ end subroutine c_fv3gfs_geo_clone
 subroutine c_fv3gfs_geo_delete(c_key_self) bind(c,name='fv3gfs_geo_delete_f90')
 
 implicit none
-integer(c_int), intent(inout) :: c_key_self     
+integer(c_int), intent(inout) :: c_key_self
 
 call fv3gfs_geom_registry%get(c_key_self, self)
+
 ! deallocate whatever is in self
+call mpp_deallocate_domain(self)
+
 call fv3gfs_geom_registry%remove(c_key_self)
 
 end subroutine c_fv3gfs_geo_delete
