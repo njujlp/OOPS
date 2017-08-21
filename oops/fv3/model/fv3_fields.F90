@@ -411,69 +411,10 @@ SUBROUTINE read_file(fld, c_conf, vdate)
         WRITE(ctile,'(i1)')(color+1)
         fname=fld%bckgfile(1:itindex+3)//ctile//fld%bckgfile(itindex+5:)
         
-        IF (nf90_noerr /= nf90_open(path=TRIM(ADJUSTL(fname)),&
-             &mode=nf90_nowrite,ncid=ncfileid)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.1")
-        
         varname=fld%fldnames3d(ifield)
 
-        IF (nf90_noerr /= nf90_inq_varid(ncfileid,TRIM(varname),&
-             &varid=ncvarid)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.2"//&
-             &TRIM(varname))
+        CALL ncread(fname,varname,fld%nxg,fld%nyg,fld%nl,ihisttime,gfldg)
 
-        IF (nf90_noerr /= nf90_inquire_variable(ncid=ncfileid,&
-             &varid=ncvarid,dimids=dimids)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.3"//&
-             &TRIM(varname))
-
-        IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(1),&
-             &len = ix)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.4"//&
-             &TRIM(varname))
-
-        IF (ix /= fld%nxg ) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.4.1"//&
-             &TRIM(varname))
-
-        IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(2),&
-             &len = iy)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.5"//&
-             &TRIM(varname))
-
-        IF (iy /= fld%nyg ) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.5.1"//&
-             &TRIM(varname))
-
-        IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(3),&
-             &len = iz)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.6"//&
-             &TRIM(varname))
-
-        IF (iz /= fld%nl ) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.6.1"//&
-             &TRIM(varname))
-
-        IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(4),&
-             &len = it)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.7"//&
-             &TRIM(varname))
-
-        IF (it < ihisttime ) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.7.1"//&
-             &TRIM(varname))
-
-!        ncstatus=nf90_get_var(ncfileid, ncvarid, gfldg,&
-!             &start=(/1,1,1,ihisttime/),&
-!             &count=(/fld%nxg,fld%nyg,fld%nl,1/))
-
-!        PRINT *,'@@@1',ncstatus,nf90_strerror(ncstatus)
-
-
-        IF (nf90_noerr /= nf90_get_var(ncfileid, ncvarid, gfldg,&
-             &start=(/1,1,1,ihisttime/),&
-             &count=(/fld%nxg,fld%nyg,fld%nl,1/)))&
-             &CALL abor1_ftn("fv3_fields.read_file:stop.8")
      ENDIF
 
      CALL MPI_Bcast(gfldg,fld%nxg*fld%nyg*fld%nl,mpi_type_real,&
@@ -481,91 +422,45 @@ SUBROUTINE read_file(fld, c_conf, vdate)
 
      ioff=(ifield-1)*fld%nl
 
-!     PRINT *,'@@@0',SIZE(fld%gfld,3)
-!     PRINT *,'@@@1',nproc,ioff+1,ioff+fld%nl,joffg,joffg+fld%ny-1
-!
-!     PRINT *,SIZE(fld%gfld,1),SIZE(fld%gfld,2),&
-!          &SIZE(gfldg(ioffg:ioffg+fld%nx-1,:,:),1),&
-!          &SIZE(gfldg(:,joffg:joffg+fld%ny-1,:),1),&
-!          &SIZE(gfldg,1)
-
-
      fld%gfld(:,:,ioff+1:ioff+fld%nl)=gfldg(&
           &ioffg:ioffg+fld%nx-1,&
           &joffg:joffg+fld%ny-1,&
           &:)
+
+!     PRINT *,'@@@0',nproc,MINVAL(fld%gfld(:,:,ioff+1:ioff+fld%nl)),&
+!          &MAXVAL(fld%gfld(:,:,ioff+1:ioff+fld%nl))
 
   ENDDO
 
   DO ifield=1,fld%nf2d
 
      IF (key == 0) THEN
-
+        
+        WRITE(ctile,'(i1)')(color+1)
+        fname=fld%bckgfile(1:itindex+3)//ctile//fld%bckgfile(itindex+5:)
+        
         varname=fld%fldnames2d(ifield)
 
-        IF (nf90_noerr /= nf90_inq_varid(ncfileid,TRIM(varname),&
-             &varid=ncvarid)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.2"//&
-             &TRIM(varname))
-
-        IF (nf90_noerr /= nf90_inquire_variable(ncid=ncfileid,&
-             &varid=ncvarid,dimids=dimids)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.3"//&
-             &TRIM(varname))
-
-        IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(1),&
-             &len = ix)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.4"//&
-             &TRIM(varname))
-
-        IF (ix /= fld%nxg ) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.4.1"//&
-             &TRIM(varname))
-
-        IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(2),&
-             &len = iy)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.5"//&
-             &TRIM(varname))
-
-        IF (iy /= fld%nyg ) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.5.1"//&
-             &TRIM(varname))
-
-        IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(3),&
-             &len = it)) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.6"//&
-             &TRIM(varname))
-
-        IF (it < ihisttime ) &
-             &CALL abor1_ftn("fv3_fields.read_file:stop.6.1"//&
-             &TRIM(varname))
-
-        IF (nf90_noerr /= nf90_get_var(ncfileid, ncvarid, &
-             &gfldg(:,:,1),&
-             &start=(/1,1,ihisttime/),&
-             &count=(/fld%nxg,fld%nyg,1/)))&
-             &CALL abor1_ftn("fv3_fields.read_file:stop.7")
-
+        CALL ncread(fname,varname,fld%nxg,fld%nyg,ihisttime,gfldg(:,:,1))
+        
      ENDIF
 
-     CALL MPI_Bcast(gfldg,fld%nxg*fld%nyg*fld%nl,mpi_type_real,&
+     CALL MPI_Bcast(gfldg,fld%nxg*fld%nyg,mpi_type_real,&
           &0,newcomm,iret)
 
      fld%gfld(:,:,ioff+1:ioff+1)=gfldg(&
           &ioffg:ioffg+fld%nx-1,&
           &joffg:joffg+fld%ny-1,&
           &1:1)
+  
+!     PRINT *,'@@@0',nproc,MINVAL(fld%gfld(:,:,ioff+1:ioff+1)),&
+!          &MAXVAL(fld%gfld(:,:,ioff+1:ioff+1))
      
      ioff=ioff+1
 
   ENDDO
 
   DEALLOCATE(gfldg)
-
-  IF (key == 0) THEN  
-     IF (nf90_noerr /= nf90_close(ncfileid))&
-          &CALL abor1_ftn("fv3_fields.read_file:stop.9")
-  ENDIF
 
   CALL check(fld)
   
@@ -771,12 +666,12 @@ SUBROUTINE write_file(fld, c_conf, vdate)
      ENDIF
 
   ENDDO
-
+  
   IF (key == 0) THEN
      IF (nf90_noerr /= nf90_close(ncfileid))&
           &CALL abor1_ftn("fv3_fields.write_file:stop.9")
   ENDIF
-
+  
   DEALLOCATE(gfldg)
 
 !  filename = genfilename(c_conf,max_string_length,vdate)

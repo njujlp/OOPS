@@ -70,6 +70,7 @@ INTEGER :: ncfileid,ncvarid,ncstatus,nprocs
 INTEGER, DIMENSION(nc_maxdims) :: dimids
 CHARACTER(len=1) :: ctile
 INTEGER :: nxblocks,nyblocks
+CHARACTER(len=NF90_MAX_NAME) :: varname
 
 ! mpi definitions.
 INCLUDE 'mpif.h'
@@ -156,46 +157,14 @@ IF (key == 0) THEN
    WRITE(ctile,'(i1)')(color+1)
    fname=self%gridfile(1:itindex+3)//ctile//self%gridfile(itindex+5:)
 
-   IF (nf90_noerr /= nf90_open(path=TRIM(ADJUSTL(fname)),&
-        &mode=nf90_nowrite,ncid=ncfileid)) &
-        &CALL abor1_ftn("fv3_geom_mod:stop.1")
+   varname=lonname
+   CALL ncread(fname,varname,self%nxg,self%nyg,long)
+
+   varname=latname
+   CALL ncread(fname,varname,self%nxg,self%nyg,latg)
    
-   IF (nf90_noerr /= nf90_inq_varid(ncfileid,TRIM(lonname),&
-        &varid=ncvarid)) &
-        &CALL abor1_ftn("fv3_geom_mod:stop.2")
-
-   IF (nf90_noerr /= nf90_inquire_variable(ncid=ncfileid,&
-        &varid=ncvarid,dimids=dimids)) &
-        &CALL abor1_ftn("fv3_geom_mod:stop.3")
-
-   IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(1),&
-        &len = ix)) &
-        &CALL abor1_ftn("fv3_geom_mod:stop.4")
-
-   IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(2),&
-        &len = iy)) &
-        &CALL abor1_ftn("fv3_geom_mod:stop.5")
-
-   IF (ix /= self%nxg .OR. iy /= self%nyg) &
-        &CALL abor1_ftn("fv3_geom_mod:stop.6")
-
-   IF (nf90_noerr /= nf90_get_var(ncfileid, ncvarid, long)) &
-        &CALL abor1_ftn("fv3_geom_mod:stop.7")
-
-   IF (nf90_noerr /= nf90_inq_varid(ncfileid,TRIM(latname),&
-        &varid=ncvarid)) &
-        &CALL abor1_ftn("fv3_geom_mod:stop.8")
-
-   IF (nf90_noerr /= nf90_inq_varid(ncfileid,TRIM(areaname),&
-        &varid=ncvarid)) &
-        &CALL abor1_ftn("fv3_geom_mod:stop.8")
-
-   IF (nf90_noerr /= nf90_get_var(ncfileid, ncvarid, latg)) &
-        &CALL abor1_ftn("fv3_geom_mod:stop.9")
-
-   IF (nf90_noerr /= nf90_get_var(ncfileid, ncvarid, areag)) &
-        &CALL abor1_ftn("fv3_geom_mod:stop.9")
-   
+   varname=areaname
+   CALL ncread(fname,varname,self%nxg,self%nyg,areag)
 
 ENDIF
 
@@ -205,7 +174,8 @@ CALL MPI_Bcast(long,self%nxg*self%nyg,mpi_type_real,0,newcomm,iret)
 CALL MPI_Bcast(latg,self%nxg*self%nyg,mpi_type_real,0,newcomm,iret)
 CALL MPI_Bcast(areag,self%nxg*self%nyg,mpi_type_real,0,newcomm,iret)
 
-!PRINT *,nproc,color,MINVAL(long),MAXVAL(long),MINVAL(latg),MAXVAL(latg)
+!PRINT *,'@@@0',nproc,color,MINVAL(long),MAXVAL(long),MINVAL(latg),MAXVAL(latg),&
+!     &MINVAL(areag),MAXVAL(areag)
 
 self%ibeg=begindex(key+1,1)
 self%jbeg=begindex(key+1,2)

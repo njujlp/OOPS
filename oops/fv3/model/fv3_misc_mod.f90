@@ -7,7 +7,7 @@ MODULE fv3_misc_mod
 
   PRIVATE
   PUBLIC :: mpp_compute_extent,namelist_fv3,get_varnames,&
-       &determine_mpi_type_real
+       &determine_mpi_type_real,ncread
   PUBLIC :: max_string_length,nc_maxdims,&
        &lonname,latname,areaname,varseparator
   PUBLIC :: mpi_type_real
@@ -19,6 +19,12 @@ MODULE fv3_misc_mod
   CHARACTER(len=NF90_MAX_NAME), PARAMETER :: areaname="area"
 
   INTEGER :: mpi_type_real
+
+  INTERFACE ncread
+     MODULE PROCEDURE ncread3d
+     MODULE PROCEDURE ncread2d
+     MODULE PROCEDURE ncread2d_static
+  END INTERFACE ncread
 
 CONTAINS
 
@@ -246,6 +252,205 @@ CONTAINS
     nvars=j
     
   END SUBROUTINE get_varnames
-          
+
+  SUBROUTINE ncread3d(fname,varname,nxg,nyg,nz,itime,gfldg)
+
+    CHARACTER(len=max_string_length), INTENT(in) :: fname
+    CHARACTER(len=NF90_MAX_NAME), INTENT(in) :: varname
+    INTEGER, INTENT(in) :: nxg,nyg,nz,itime
+    REAL(kind=kind_real), DIMENSION(nxg,nyg,nz), INTENT(inout) :: gfldg    
+
+    INTEGER, DIMENSION(nc_maxdims) :: dimids
+    INTEGER :: ncfileid,ncvarid
+
+    INTEGER :: ix,iy,iz,it
+
+!seems to automatically close the file on exit fromthe routine
+
+    IF (nf90_noerr /= nf90_open(path=TRIM(ADJUSTL(fname)),&
+         &mode=nf90_nowrite,ncid=ncfileid)) &
+         &CALL abor1_ftn("fv3_fields.ncread3d:stop.1")
+
+    IF (nf90_noerr /= nf90_inq_varid(ncfileid,TRIM(varname),&
+             &varid=ncvarid)) &
+             &CALL abor1_ftn("fv3_fields.ncread3d:stop.2"//&
+             &TRIM(varname))
+    
+    IF (nf90_noerr /= nf90_inquire_variable(ncid=ncfileid,&
+         &varid=ncvarid,dimids=dimids)) &
+         &CALL abor1_ftn("fv3_fields.ncread3d:stop.3"//&
+         &TRIM(varname))
+    
+    IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(1),&
+         &len = ix)) &
+         &CALL abor1_ftn("fv3_fields.ncread3d:stop.4"//&
+         &TRIM(varname))
+    
+    IF (ix /= nxg ) &
+         &CALL abor1_ftn("fv3_fields.ncread3d:stop.4.1"//&
+         &TRIM(varname))
+    
+    IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(2),&
+         &len = iy)) &
+         &CALL abor1_ftn("fv3_fields.ncread3d:stop.5"//&
+         &TRIM(varname))
+    
+    IF (iy /= nyg ) &
+         &CALL abor1_ftn("fv3_fields.ncread3d:stop.5.1"//&
+         &TRIM(varname))
+    
+    IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(3),&
+         &len = iz)) &
+         &CALL abor1_ftn("fv3_fields.ncread3d:stop.6"//&
+         &TRIM(varname))
+    
+    IF (iz /= nz ) &
+         &CALL abor1_ftn("fv3_fields.ncread3d:stop.6.1"//&
+         &TRIM(varname))
+    
+    IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(4),&
+         &len = it)) &
+         &CALL abor1_ftn("fv3_fields.ncread3d:stop.7"//&
+         &TRIM(varname))
+    
+    IF (it < itime ) &
+         &CALL abor1_ftn("fv3_fields.ncread3d:stop.7.1"//&
+         &TRIM(varname))
+    
+!        ncstatus=nf90_get_var(ncfileid, ncvarid, gfldg,&
+!             &start=(/1,1,1,itime/),&
+!             &count=(/nxg,nyg,nz,1/))
+    
+!        PRINT *,'@@@1',ncstatus,nf90_strerror(ncstatus)
+    
+    
+    IF (nf90_noerr /= nf90_get_var(ncfileid, ncvarid, gfldg,&
+         &start=(/1,1,1,itime/),&
+         &count=(/nxg,nyg,nz,1/)))&
+         &CALL abor1_ftn("fv3_fields.ncread3d:stop.8")
+  
+    IF (nf90_noerr /= nf90_close(ncfileid))&
+         &CALL abor1_ftn("fv3_fields.write_file:stop.9")
+    
+  END SUBROUTINE ncread3d
+
+  SUBROUTINE ncread2d(fname,varname,nxg,nyg,itime,gfldg)
+
+    CHARACTER(len=max_string_length), INTENT(in) :: fname
+    CHARACTER(len=NF90_MAX_NAME), INTENT(in) :: varname
+    INTEGER, INTENT(in) :: nxg,nyg,itime
+    REAL(kind=kind_real), DIMENSION(nxg,nyg), INTENT(inout) :: gfldg    
+
+    INTEGER, DIMENSION(nc_maxdims) :: dimids
+    INTEGER :: ncfileid,ncvarid
+
+    INTEGER :: ix,iy,it
+
+    IF (nf90_noerr /= nf90_open(path=TRIM(ADJUSTL(fname)),&
+         &mode=nf90_nowrite,ncid=ncfileid)) &
+         &CALL abor1_ftn("fv3_fields.ncread2d:stop.1")
+    
+    IF (nf90_noerr /= nf90_inq_varid(ncfileid,TRIM(varname),&
+             &varid=ncvarid)) &
+             &CALL abor1_ftn("fv3_fields.ncread2d:stop.2"//&
+             &TRIM(varname))
+    
+    IF (nf90_noerr /= nf90_inquire_variable(ncid=ncfileid,&
+         &varid=ncvarid,dimids=dimids)) &
+         &CALL abor1_ftn("fv3_fields.ncread2d:stop.3"//&
+         &TRIM(varname))
+    
+    IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(1),&
+         &len = ix)) &
+         &CALL abor1_ftn("fv3_fields.ncread2d:stop.4"//&
+         &TRIM(varname))
+    
+    IF (ix /= nxg ) &
+         &CALL abor1_ftn("fv3_fields.ncread2d:stop.4.1"//&
+         &TRIM(varname))
+    
+    IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(2),&
+         &len = iy)) &
+         &CALL abor1_ftn("fv3_fields.ncread2d:stop.5"//&
+         &TRIM(varname))
+    
+    IF (iy /= nyg ) &
+         &CALL abor1_ftn("fv3_fields.ncread2d:stop.5.1"//&
+         &TRIM(varname))
+    
+    IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(3),&
+         &len = it)) &
+         &CALL abor1_ftn("fv3_fields.ncread2d:stop.7"//&
+         &TRIM(varname))
+    
+    IF (it < itime ) &
+         &CALL abor1_ftn("fv3_fields.ncread2d:stop.7.1"//&
+         &TRIM(varname))
+    
+    IF (nf90_noerr /= nf90_get_var(ncfileid, ncvarid, gfldg,&
+         &start=(/1,1,itime/),&
+         &count=(/nxg,nyg,1/)))&
+         &CALL abor1_ftn("fv3_fields.ncread2d:stop.8")
+  
+    IF (nf90_noerr /= nf90_close(ncfileid))&
+         &CALL abor1_ftn("fv3_fields.ncread2d:stop.9")
+
+
+  END SUBROUTINE ncread2d
+
+  SUBROUTINE ncread2d_static(fname,varname,nxg,nyg,gfldg)
+
+    CHARACTER(len=max_string_length), INTENT(in) :: fname
+    CHARACTER(len=NF90_MAX_NAME), INTENT(in) :: varname
+    INTEGER, INTENT(in) :: nxg,nyg
+    REAL(kind=kind_real), DIMENSION(nxg,nyg), INTENT(inout) :: gfldg    
+
+    INTEGER, DIMENSION(nc_maxdims) :: dimids
+    INTEGER :: ncfileid,ncvarid
+
+    INTEGER :: ix,iy
+
+    IF (nf90_noerr /= nf90_open(path=TRIM(ADJUSTL(fname)),&
+         &mode=nf90_nowrite,ncid=ncfileid)) &
+         &CALL abor1_ftn("fv3_fields.ncread2d_static:stop.1")
+    
+    IF (nf90_noerr /= nf90_inq_varid(ncfileid,TRIM(varname),&
+             &varid=ncvarid)) &
+             &CALL abor1_ftn("fv3_fields.ncread2d_static:stop.2"//&
+             &TRIM(varname))
+    
+    IF (nf90_noerr /= nf90_inquire_variable(ncid=ncfileid,&
+         &varid=ncvarid,dimids=dimids)) &
+         &CALL abor1_ftn("fv3_fields.ncread2d_static:stop.3"//&
+         &TRIM(varname))
+    
+    IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(1),&
+         &len = ix)) &
+         &CALL abor1_ftn("fv3_fields.ncread2d_static:stop.4"//&
+         &TRIM(varname))
+    
+    IF (ix /= nxg ) &
+         &CALL abor1_ftn("fv3_fields.ncread2d_static:stop.4.1"//&
+         &TRIM(varname))
+    
+    IF (nf90_noerr /= nf90_inquire_dimension(ncfileid,dimids(2),&
+         &len = iy)) &
+         &CALL abor1_ftn("fv3_fields.ncread2d_static:stop.5"//&
+         &TRIM(varname))
+    
+    IF (iy /= nyg ) &
+         &CALL abor1_ftn("fv3_fields.ncread2d_static:stop.5.1"//&
+         &TRIM(varname))
+    
+    IF (nf90_noerr /= nf90_get_var(ncfileid, ncvarid, gfldg,&
+         &start=(/1,1/),&
+         &count=(/nxg,nyg/)))&
+         &CALL abor1_ftn("fv3_fields.ncread2d_static:stop.8")
+  
+    IF (nf90_noerr /= nf90_close(ncfileid))&
+         &CALL abor1_ftn("fv3_fields.ncread2d_static:stop.9")
+    
+  END SUBROUTINE ncread2d_static
+
 END MODULE fv3_misc_mod
 
