@@ -28,11 +28,17 @@ namespace fv3gfs {
 
 extern "C" {
 // -----------------------------------------------------------------------------
+//  For all FV3 runs
+// -----------------------------------------------------------------------------
+  void fv3gfs_setup_f(const eckit::Configuration * const *);
+  void fv3gfs_finalize_f();
+
+// -----------------------------------------------------------------------------
 //  Geometry
 // -----------------------------------------------------------------------------
   void fv3gfs_geo_setup_f90(int & keyGeom, const eckit::Configuration * const *);
   void fv3gfs_geo_clone_f90(const int & keyGeom, int & keyGeom_other);
-  void fv3gfs_geo_info_f90(const int & keyGeom, int &);
+  void fv3gfs_geo_info_f90(const int & keyGeom);
   void fv3gfs_geo_delete_f90(int & keyGeom);
 
 // -----------------------------------------------------------------------------

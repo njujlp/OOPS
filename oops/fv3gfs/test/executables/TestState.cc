@@ -1,10 +1,10 @@
 
+#include "model/RunFV3.h"
 #include "model/Traits.h"
-#include "oops/runs/Run.h"
-#include "test/interface/State.h"
+#include "test/interface/Geometry.h"
 
 int main(int argc,  char ** argv) {
-  oops::Run run(argc, argv);
+  fv3gfs::RunFV3 run(argc, argv);
   test::State<fv3gfs::Traits> tests;
   run.execute(tests);
   return 0;

@@ -28,9 +28,8 @@ Geometry::~Geometry() {
 }
 // -----------------------------------------------------------------------------
 void Geometry::print(std::ostream & os) const {
-  int nx;
-  fv3gfs_geo_info_f90(keyGeom_, nx);
-  os << "nx = " << nx;
+  fv3gfs_geo_info_f90(keyGeom_);
+  os << "fv3gfs::Geometry::print not implemented yet";
 }
 // -----------------------------------------------------------------------------
 }  // namespace fv3gfs

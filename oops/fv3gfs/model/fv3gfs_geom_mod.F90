@@ -8,7 +8,6 @@ use config_mod
 
 use mpp_mod,         only: mpp_pe, mpp_npes
 use mpp_mod,         only: mpp_error, FATAL
-use mpp_domains_mod, only: mpp_domains_set_stack_size
 use mpp_domains_mod, only: domain2D, mpp_define_layout, mpp_define_mosaic
 use mpp_domains_mod, only: mpp_define_io_domain
 use mpp_domains_mod, only: mpp_get_compute_domain, mpp_get_data_domain
@@ -163,7 +162,7 @@ end subroutine c_fv3gfs_geo_delete
 
 ! ------------------------------------------------------------------------------
 
-subroutine c_fv3gfs_geo_info(c_key_self, c_n) bind(c,name='fv3gfs_geo_info_f90')
+subroutine c_fv3gfs_geo_info(c_key_self) bind(c,name='fv3gfs_geo_info_f90')
 implicit none
 integer(c_int), intent(in   ) :: c_key_self
 integer(c_int), intent(inout) :: c_n
@@ -172,7 +171,7 @@ type(domain2D), pointer :: self
 call fv3gfs_geom_registry%get(c_key_self, self)
 ! get a few numbers back to C++ to print so that one can have a quick idea
 ! about the definition of the domain
-c_n = self%...
+!c_n = self%...
 
 end subroutine c_fv3gfs_geo_info
 
