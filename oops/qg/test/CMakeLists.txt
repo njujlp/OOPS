@@ -354,7 +354,7 @@ ecbuild_add_test( TARGET test_qg_dirac_nicas
                   COMMAND "compare.sh"
                   ARGS "${CMAKE_BINARY_DIR}/bin/qg_dirac.x testinput/dirac.nicas.json"
                        testoutput/dirac.nicas.test
-                  DEPENDS qg_4dvar.x )
+                  DEPENDS qg_dirac.x )
 endif()
 
 ecbuild_add_test( TARGET test_qg_dfi
@@ -363,4 +363,3 @@ ecbuild_add_test( TARGET test_qg_dfi
                   ARGS "${CMAKE_BINARY_DIR}/bin/qg_dfi.x testinput/dfi.json"
                        testoutput/dfi.test
                   DEPENDS qg_dfi.x )
-

@@ -190,10 +190,12 @@ end do
 !$omp end parallel do
 write(mpl%unit,'(a)') '100%'
 
-! Gather data
+! Initialize object
 ndata%c%prefix = 'c'
 ndata%c%n_src = ndata%ns
 ndata%c%n_dst = ndata%ns
+
+! Gather data
 call convol_gather_data(c_n_s,c,ndata%c)
 
 ! Release memory
@@ -217,12 +219,15 @@ real(kind_real),intent(in) :: rhs(ndata%ns)        !< Scaled horizontal support 
 real(kind_real),intent(in) :: rvs(ndata%ns)        !< Scaled vertical support radius
 
 ! Local variables
-integer :: ms,n_s_max,progint,ithread,is,ic1,il1,il0,jc1,jl1,jl0,js,i
-integer :: iproc,is_s(mpl%nproc),is_e(mpl%nproc),ns_loc(mpl%nproc),is_loc
+integer :: ms,n_s_max,progint,ithread,is,ic1,il1,il0,jc1,jl1,jl0,js,i,iproc
+integer :: is_s(mpl%nproc),is_e(mpl%nproc),ns_loc(mpl%nproc),is_loc
+integer :: ic1_s(mpl%nproc),ic1_e(mpl%nproc),nc1_loc(mpl%nproc),ic1_loc
 integer :: c_n_s(mpl%nthread)
 integer,allocatable :: mask_ctree(:),nn_index(:,:)
+integer,allocatable :: rbuf_index(:),sbuf_index(:)
 real(kind_real) :: distnorm,S_test
 real(kind_real),allocatable :: nn_dist(:,:)
+real(kind_real),allocatable :: rbuf_dist(:),sbuf_dist(:)
 logical :: submask(ndata%nc1,ndata%nl1)
 logical,allocatable :: done(:)
 type(ctreetype) :: ctree
@@ -243,16 +248,78 @@ mask_ctree = 1
 ctree = create_ctree(ndata%nc1,dble(ndata%lon(ndata%ic1_to_ic0)),dble(ndata%lat(ndata%ic1_to_ic0)),mask_ctree)
 deallocate(mask_ctree)
 
-! Compute nearest neighbors
-write(mpl%unit,'(a10,a)') '','Compute nearest neighbors'
+! Number of neighbors
 ms = 10*min(floor(pi*nam%resol**2*(1.0-cos(minval(rhs)))/(sqrt(3.0)*minval(rhs)**2)),ndata%nc1)
 ms = min(ms,ndata%nc1)
+
+! MPI splitting
+do iproc=1,mpl%nproc
+   ic1_s(iproc) = (iproc-1)*(ndata%nc1/mpl%nproc+1)+1
+   ic1_e(iproc) = min(iproc*(ndata%nc1/mpl%nproc+1),ndata%nc1)
+   nc1_loc(iproc) = ic1_e(iproc)-ic1_s(iproc)+1
+end do
+
+! Allocation
 allocate(nn_index(ms,ndata%nc1))
 allocate(nn_dist(ms,ndata%nc1))
-do ic1=1,ndata%nc1
+
+! Compute nearest neighbors
+write(mpl%unit,'(a10,a)') '','Compute nearest neighbors'
+do ic1_loc=1,nc1_loc(mpl%myproc)
+   ic1 = ic1_s(mpl%myproc)+ic1_loc-1
    call find_nearest_neighbors(ctree,dble(ndata%lon(ndata%ic1_to_ic0(ic1))), &
  & dble(ndata%lat(ndata%ic1_to_ic0(ic1))),ms,nn_index(:,ic1),nn_dist(:,ic1))
 end do
+
+! Communication
+if (mpl%main) then
+   do iproc=1,mpl%nproc
+      if (iproc/=mpl%ioproc) then
+         ! Allocation
+         allocate(rbuf_index(ms*nc1_loc(iproc)))
+         allocate(rbuf_dist(ms*nc1_loc(iproc)))
+
+         ! Receive data on ioproc
+         call mpl_recv(ms*nc1_loc(iproc),rbuf_index,iproc,mpl%tag)
+         call mpl_recv(ms*nc1_loc(iproc),rbuf_dist,iproc,mpl%tag+1)
+
+         ! Format data
+         do ic1_loc=1,nc1_loc(iproc)
+            ic1 = ic1_s(iproc)+ic1_loc-1
+            nn_index(:,ic1) = rbuf_index((ic1_loc-1)*ms+1:ic1_loc*ms)
+            nn_dist(:,ic1) = rbuf_dist((ic1_loc-1)*ms+1:ic1_loc*ms)
+         end do
+ 
+         ! Release memory
+         deallocate(rbuf_index)
+         deallocate(rbuf_dist)
+      end if
+   end do
+else
+   ! Allocation
+   allocate(sbuf_index(ms*nc1_loc(mpl%myproc)))
+   allocate(sbuf_dist(ms*nc1_loc(mpl%myproc)))
+
+   ! Format data
+   do ic1_loc=1,nc1_loc(mpl%myproc)
+      ic1 = ic1_s(mpl%myproc)+ic1_loc-1
+      sbuf_index((ic1_loc-1)*ms+1:ic1_loc*ms) = nn_index(:,ic1)
+      sbuf_dist((ic1_loc-1)*ms+1:ic1_loc*ms) = nn_dist(:,ic1)
+   end do
+
+   ! Send data to ioproc
+   call mpl_send(ms*nc1_loc(mpl%myproc),sbuf_index,mpl%ioproc,mpl%tag)
+   call mpl_send(ms*nc1_loc(mpl%myproc),sbuf_dist,mpl%ioproc,mpl%tag+1)
+
+   ! Release memory
+   deallocate(sbuf_index)
+   deallocate(sbuf_dist)
+end if
+mpl%tag = mpl%tag+2
+
+! Broadcast
+call mpl_bcast(nn_index,mpl%ioproc)
+call mpl_bcast(nn_dist,mpl%ioproc)
 
 ! MPI splitting
 do iproc=1,mpl%nproc
@@ -315,10 +382,12 @@ end do
 !$omp end parallel do
 write(mpl%unit,'(a)') '100%'
 
-! Gather data
+! Initialize object
 ndata%c%prefix = 'c'
 ndata%c%n_src = ndata%ns
 ndata%c%n_dst = ndata%ns
+
+! Gather data
 call convol_gather_data(c_n_s,c,ndata%c)
 
 ! Release memory
@@ -427,9 +496,9 @@ type(linoptype),intent(in) :: cin(mpl%nthread) !< Linear operator for each threa
 type(linoptype),intent(inout) :: cout          !< Gathered linear operator
 
 ! Local variables
-integer :: ithread,offset,iproc,i_s
+integer :: ithread,offset,iproc
 integer :: csum_n_sg(mpl%nproc)
-type(linoptype) :: csum,cg(mpl%nproc)
+type(linoptype) :: csum
 
 ! Allocation
 csum%n_s = sum(c_n_s)
@@ -470,40 +539,22 @@ call linop_alloc(cout)
 
 ! Communication
 if (mpl%main) then
-   ! Allocation
-   do iproc=1,mpl%nproc
-      cg(iproc)%n_s = maxval(csum_n_sg)
-      call linop_alloc(cg(iproc))
-   end do
-
+   offset = 0
    do iproc=1,mpl%nproc
       if (iproc==mpl%ioproc) then
          ! Copy data
-         cg(iproc)%row(1:csum_n_sg(iproc)) = csum%row
-         cg(iproc)%col(1:csum_n_sg(iproc)) = csum%col
-         cg(iproc)%S(1:csum_n_sg(iproc)) = csum%S
+         cout%row(offset+1:offset+csum_n_sg(iproc)) = csum%row
+         cout%col(offset+1:offset+csum_n_sg(iproc)) = csum%col
+         cout%S(offset+1:offset+csum_n_sg(iproc)) = csum%S
       else
          ! Receive data on ioproc
-         call mpl_recv(csum_n_sg(iproc),cg(iproc)%row(1:csum_n_sg(iproc)),iproc,mpl%tag)
-         call mpl_recv(csum_n_sg(iproc),cg(iproc)%col(1:csum_n_sg(iproc)),iproc,mpl%tag+1)
-         call mpl_recv(csum_n_sg(iproc),cg(iproc)%S(1:csum_n_sg(iproc)),iproc,mpl%tag+2)
+         call mpl_recv(csum_n_sg(iproc),cout%row(offset+1:offset+csum_n_sg(iproc)),iproc,mpl%tag)
+         call mpl_recv(csum_n_sg(iproc),cout%col(offset+1:offset+csum_n_sg(iproc)),iproc,mpl%tag+1)
+         call mpl_recv(csum_n_sg(iproc),cout%S(offset+1:offset+csum_n_sg(iproc)),iproc,mpl%tag+2)
       end if
-   end do
 
-   ! Format data
-   offset = 0
-   do iproc=1,mpl%nproc
-      do i_s=1,csum_n_sg(iproc)
-         cout%row(offset+i_s) = cg(iproc)%row(i_s)
-         cout%col(offset+i_s) = cg(iproc)%col(i_s)
-         cout%S(offset+i_s) = cg(iproc)%S(i_s)
-      end do
+      !  Update offset
       offset = offset+csum_n_sg(iproc)
-   end do
-
-   ! Release memory
-   do iproc=1,mpl%nproc
-      call linop_dealloc(cg(iproc))
    end do
 else
    ! Send data to ioproc
