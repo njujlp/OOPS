@@ -366,11 +366,11 @@ type(fv3gfs_field), pointer :: fld
 
 call fv3gfs_field_registry%get(c_key_fld,fld)
 
-nx = fld%nx
-ny = fld%ny
-nf = fld%nf
-nb =0
-if (fld%lbc) nb = 2
+!nx = fld%nx
+!ny = fld%ny
+!nf = fld%nf
+!nb =0
+!if (fld%lbc) nb = 2
 
 end subroutine fv3gfs_fieldnum_c
 

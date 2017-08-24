@@ -21,10 +21,14 @@ fv3gfs_setup.f90
 fv3gfs_vars_mod.F90
 )
 
+set ( FMS_LIBRARIES $ENV{FMS_LIBRARIES} )
+set ( FMS_INCLUDES $ENV{FMS_INCLUDES} )
+
 ecbuild_add_library( TARGET   fv3gfs
                      DEFINITIONS ${cfdealloc}
                      SOURCES  ${oops_fv3gfs_src_files}
-                     LIBS     oops ${LAPACK_LIBRARIES}
+                     LIBS     oops ${LAPACK_LIBRARIES} ${NETCDF_LIBRARIES} ${FMS_LIBRARIES}
+                     INCLUDES ${FMS_INCLUDES}
                      INSTALL_HEADERS LISTED
                      LINKER_LANGUAGE ${OOPS_LINKER_LANGUAGE}
                     )

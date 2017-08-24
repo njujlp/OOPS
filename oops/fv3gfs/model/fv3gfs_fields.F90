@@ -72,7 +72,6 @@ end subroutine zeros
 ! ------------------------------------------------------------------------------
 
 subroutine random(self)
-use random_vectors_mod
 implicit none
 type(fv3gfs_field), intent(inout) :: self
 
