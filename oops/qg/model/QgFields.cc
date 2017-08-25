@@ -165,6 +165,7 @@ void QgFields::read(const eckit::Configuration & config) {
 void QgFields::write(const eckit::Configuration & config) const {
   const eckit::Configuration * conf = &config;
   const util::DateTime * dtp = &time_;
+  oops::Log::debug() << "QgFields::write conf = " << config << std::endl;
   qg_field_write_file_f90(keyFlds_, &conf, &dtp);
 }
 // -----------------------------------------------------------------------------

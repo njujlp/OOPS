@@ -18,6 +18,11 @@
   },
   "StateTest": {
     "date": "2009-12-31T00:00:00Z",
+    "save": {
+      "datadir": "Data",
+      "exp": "test",
+      "type": "an"
+    },
     "norm": "15.010",
     "tolerance": "0.005"
   },
