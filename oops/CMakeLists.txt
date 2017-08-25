@@ -145,9 +145,8 @@ add_subdirectory( src )
 # which find OOPS as an installed package or subproject
 
 
-#add_subdirectory( l95 )
+add_subdirectory( l95 )
 add_subdirectory( qg )
-add_subdirectory( Mom5Cice5 )
 add_subdirectory( fv3gfs )
 
 

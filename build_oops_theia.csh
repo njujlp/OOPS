@@ -21,9 +21,6 @@ module load eigen
 
 module list
 
-# Use a better version of doxygen than the default system version
-set doxygen = "/scratch3/NCEPDEV/hwrf/save/Samuel.Trahan/doxygen-1.8.10/bin"
-
 # Need eigen3 library
 setenv EIGEN3_INCLUDE_DIR $EIGEN_ROOT
 
@@ -33,7 +30,7 @@ setenv NETCDF_LIBRARIES "${NETCDF}/lib/libnetcdf.a;${NETCDF}/lib/libnetcdff.a"
 # Need FMS library (For FV3GFS model only)
 setenv FMS_ROOT "/scratch4/NCEPDEV/global/save/Rahul.Mahajan/git/GFDL/FMS"
 setenv FMS_LIBRARIES "${FMS_ROOT}/build/libfms.a"
-setenv FMS_INCLUDES  "${FMS_ROOT}/include;${FMS_ROOT}/mpp/include;${FMS_ROOT}/build"
+setenv FMS_INCLUDES  "${FMS_ROOT}/build;${FMS_ROOT}/include"
 
 # Define source and build directories
 setenv SRC $PWD
@@ -43,7 +40,7 @@ rm -rf ${BUILD}
 mkdir -p ${BUILD}
 cd ${BUILD}
 
-set path = ( ${SRC}/ecbuild/bin $doxygen $path )
+set path = ( ${SRC}/ecbuild/bin $path )
 
 ecbuild \
     --build=debug \

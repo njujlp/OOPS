@@ -58,6 +58,7 @@ ecbuild_add_option( FEATURE ECKIT
                    )
 if( HAVE_ECKIT )
     set( ECKIT_LIBRARIES eckit eckit_mpi )
+    ecbuild_add_cxx11_flags()
 endif()
 
 if( ECKIT_HAVE_MPI )
