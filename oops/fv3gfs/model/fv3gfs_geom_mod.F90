@@ -88,7 +88,7 @@ pe = mpp_pe()
 npes = mpp_npes()
 
 if (mod(npes,ntiles) /= 0) call mpp_error(FATAL, &
-   "setup_geom: npes can not be divided by ntiles, no test will be done for "//trim(gtype))
+   "fv3gfs_geo_setup: npes can not be divided by ntiles, no test will be done for "//trim(gtype))
 
 npes_per_tile = npes/ntiles
 tile = pe/npes_per_tile + 1
@@ -100,11 +100,11 @@ else
 endif
 
 if (io_layout(1) <1 .or. io_layout(2) <1) call mpp_error(FATAL, &
-  "setup_geom: both elements of variable io_layout must be positive integer")
+  "fv3gfs_geo_setup: both elements of variable io_layout must be positive integer")
 if (mod(layout(1), io_layout(1)) /= 0 ) call mpp_error(FATAL, &
-  "setup_geom: layout(1) must be divided by io_layout(1)")
+  "fv3gfs_geo_setup: layout(1) must be divided by io_layout(1)")
 if (mod(layout(2), io_layout(2)) /= 0 ) call mpp_error(FATAL, &
-  "setup_geom: layout(2) must be divided by io_layout(2)")
+  "fv3gfs_geo_setup: layout(2) must be divided by io_layout(2)")
 
 allocate(global_indices(4,ntiles), layout2D(2,ntiles), pe_start(ntiles), pe_end(ntiles) )
 do n = 1, ntiles

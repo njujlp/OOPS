@@ -7,9 +7,12 @@ RM = /bin/rm -f
 NETCDF_INC = $(shell $(NETCDF)/bin/nf-config --fflags)
 NETCDF_LIB = $(shell $(NETCDF)/bin/nf-config --flibs)
 
+# Cheyenne
 FMS = /glade/p/work/rahulm/GFDL/FMS
+# Theia
+FMS = /scratch4/NCEPDEV/global/save/Rahul.Mahajan/git/GFDL/FMS
 FMS_LIB = $(FMS)/build/libfms.a
-FMS_INC = -I$(FMS)/include -I$(FMS)/mpp/include -I$(FMS)/build
+FMS_INC = -I$(FMS)/build -I$(FMS)/include
 FMSCPP = -Duse_libMPI -Duse_netCDF
 
 CPPFLAGS = $(FMS_CPP)

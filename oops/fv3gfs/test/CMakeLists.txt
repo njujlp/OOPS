@@ -1,6 +1,7 @@
 list( APPEND fv3gfs_test_input
   testinput/interfaces.json
   testinput/test.json
+  testinput/input.nml
 )
 
 # Create Data directory for test input and symlink all files

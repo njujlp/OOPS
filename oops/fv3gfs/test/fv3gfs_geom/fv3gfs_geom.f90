@@ -56,11 +56,11 @@ program fv3gfs_geom
     write(outunit, fv3gfs_geom_nml)
     call mpp_domains_set_stack_size(stackmax)
 
-    call setup_geom("latlon_grid", sizex_latlon_grid, sizey_latlon_grid, ntile_latlon, layout_latlon, io_layout, halo, domain_latlon)
+    call setup_geom(domain_latlon, "latlon_grid", sizex_latlon_grid, sizey_latlon_grid, ntile_latlon, layout_latlon, io_layout, halo)
     if (mod(npes,ntile_latlon) == 0) &
         call mpp_error(NOTE, "fv3gfs_geom: setup_geom is done for latlon_grid")
 
-    call setup_geom("cubic_grid", size_cubic_grid, size_cubic_grid, ntile_cubic, layout_cubic, io_layout, halo, domain_cubic)
+    call setup_geom(domain_cubic, "cubic_grid", size_cubic_grid, size_cubic_grid, ntile_cubic, layout_cubic, io_layout, halo)
     if (mod(npes,ntile_cubic) == 0) &
         call mpp_error(NOTE, "fv3gfs_geom: setup_geom is done for cubic_grid")
 
