@@ -14,6 +14,7 @@ use omp_lib
 use tools_display, only: msgerror,prog_init,prog_print
 use tools_kinds, only: kind_real
 use tools_missing, only: msi,msr,isnotmsi,isnotmsr
+use tools_stripack, only: trans,trmesh
 use type_mpl, only: mpl,mpl_send,mpl_recv,mpl_bcast
 use type_randgen, only: randgentype,rand_integer
 
@@ -157,7 +158,7 @@ do j=1,n
    end if
 end do
 do i=mesh%nnr,2,-1
-   call rand_integer(randgen,1,mesh%nnr,j)
+   call rand_integer(randgen,1,mesh%nnr,.true.,j)
    k = mesh%order(j)
    mesh%order(j) = mesh%order(i)
    mesh%order(i) = k

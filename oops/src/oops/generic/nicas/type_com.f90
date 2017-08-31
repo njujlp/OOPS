@@ -12,14 +12,26 @@ module type_com
 
 use module_namelist, only: nam
 use netcdf
+use tools_display, only: msgerror
+use tools_kinds, only: kind_real
 use tools_missing, only: msi,msr
+use type_geom, only: geomtype
+use type_mpl, only: mpl_alltoallv
 use tools_nc, only: ncfloat,ncerr
 
 implicit none
 
 ! Communication derived type
 type comtype
+   ! Setup data
+   integer,allocatable :: iext_to_iproc(:)
+   integer,allocatable :: iext_to_ired(:)
+
+   ! Communication data
    character(len=1024) :: prefix         !< Communication prefix
+   integer :: nred
+   integer :: next
+   integer,allocatable :: ired_to_iext(:) !< Indices conversion
    integer :: nhalo                      !< Halo buffer size
    integer :: nexcl                      !< Exclusive interior buffer size
    integer,allocatable :: jhalocounts(:) !< Halo counts
@@ -32,7 +44,7 @@ end type comtype
 
 private
 public :: comtype
-public :: com_dealloc,com_copy,com_read,com_write
+public :: com_dealloc,com_copy,com_setup,com_ext,com_red,com_read,com_write
 
 contains
 
@@ -48,6 +60,7 @@ implicit none
 type(comtype),intent(inout) :: com !< Linear operator
 
 ! Release memory
+if (allocated(com%ired_to_iext)) deallocate(com%ired_to_iext)
 if (allocated(com%jhalocounts)) deallocate(com%jhalocounts)
 if (allocated(com%jexclcounts)) deallocate(com%jexclcounts)
 if (allocated(com%jhalodispl)) deallocate(com%jhalodispl)
@@ -71,6 +84,8 @@ type(comtype),intent(inout) :: com_out !< Output linear operator
 
 ! Copy attributes
 com_out%prefix = trim(com_in%prefix)
+com_out%nred = com_in%nred
+com_out%next = com_in%next
 com_out%nhalo = com_in%nhalo
 com_out%nexcl = com_in%nexcl
 
@@ -78,6 +93,7 @@ com_out%nexcl = com_in%nexcl
 call com_dealloc(com_out)
 
 ! Allocation
+allocate(com_out%ired_to_iext(nam%nproc))
 allocate(com_out%jhalocounts(nam%nproc))
 allocate(com_out%jexclcounts(nam%nproc))
 allocate(com_out%jhalodispl(nam%nproc))
@@ -86,6 +102,7 @@ allocate(com_out%halo(com_out%nhalo))
 allocate(com_out%excl(com_out%nexcl))
 
 ! Copy data
+com_out%ired_to_iext = com_in%ired_to_iext
 com_out%jhalocounts = com_in%jhalocounts
 com_out%jexclcounts = com_in%jexclcounts
 com_out%jhalodispl = com_in%jhalodispl
@@ -94,6 +111,181 @@ com_out%halo = com_in%halo
 com_out%excl = com_in%excl
 
 end subroutine com_copy
+
+!----------------------------------------------------------------------
+! Subroutine: com_setup
+!> Purpose: setup communications
+!----------------------------------------------------------------------
+subroutine com_setup(com)
+
+implicit none
+
+! Passed variables
+type(comtype),intent(inout) :: com(nam%nproc) !< Communication
+
+! Local variables
+integer :: iproc,jproc,i,j
+
+! Allocation
+do iproc=1,nam%nproc
+   allocate(com(iproc)%jhalocounts(nam%nproc))
+   allocate(com(iproc)%jexclcounts(nam%nproc))
+   allocate(com(iproc)%jhalodispl(nam%nproc))
+   allocate(com(iproc)%jexcldispl(nam%nproc))
+end do
+
+! Initialization
+do iproc=1,nam%nproc
+   com(iproc)%jhalocounts = 0
+   com(iproc)%jexclcounts = 0
+   com(iproc)%jhalodispl = 0
+   com(iproc)%jexcldispl = 0
+end do
+
+! Compute counts
+do iproc=1,nam%nproc
+   do i=1,com(iproc)%next
+      jproc = com(iproc)%iext_to_iproc(i)
+      if (jproc/=iproc) then
+         ! Count of points sent from IPROC to JPROC
+         com(iproc)%jhalocounts(jproc) = com(iproc)%jhalocounts(jproc)+1
+
+         ! Count of points received on JPROC from IPROC
+         com(jproc)%jexclcounts(iproc) = com(jproc)%jexclcounts(iproc)+1
+      end if
+   end do
+end do
+
+! Compute displacement
+do iproc=1,nam%nproc
+   com(iproc)%jhalodispl(1) = 0
+   com(iproc)%jexcldispl(1) = 0
+   do jproc=2,nam%nproc
+      com(iproc)%jhalodispl(jproc) = com(iproc)%jhalodispl(jproc-1)+com(iproc)%jhalocounts(jproc-1)
+      com(iproc)%jexcldispl(jproc) = com(iproc)%jexcldispl(jproc-1)+com(iproc)%jexclcounts(jproc-1)
+   end do
+end do
+
+! Allocation
+do iproc=1,nam%nproc
+   com(iproc)%nhalo = sum(com(iproc)%jhalocounts)
+   com(iproc)%nexcl = sum(com(iproc)%jexclcounts)
+   allocate(com(iproc)%halo(com(iproc)%nhalo))
+   allocate(com(iproc)%excl(com(iproc)%nexcl))
+end do
+
+! Fill halo array
+do iproc=1,nam%nproc
+   com(iproc)%jhalocounts = 0
+end do
+do iproc=1,nam%nproc
+   do i=1,com(iproc)%next
+      ! Check for halo points
+      jproc = com(iproc)%iext_to_iproc(i)
+      if (jproc/=iproc) then
+         ! Count of points sent from IPROC to JPROC
+         com(iproc)%jhalocounts(jproc) = com(iproc)%jhalocounts(jproc)+1
+
+         ! Local index of points sent from IPROC to JPROC
+         com(iproc)%halo(com(iproc)%jhalodispl(jproc)+com(iproc)%jhalocounts(jproc)) = i
+      end if
+   end do
+end do
+
+! Fill excl array
+do jproc=1,nam%nproc
+   ! Loop over processors sending data to JPROC
+   do iproc=1,nam%nproc
+      do i=1,com(iproc)%jhalocounts(jproc)
+         ! Local index of points received on JPROC from IPROC
+         com(jproc)%excl(com(jproc)%jexcldispl(iproc)+i) = &
+       & com(iproc)%iext_to_ired(com(iproc)%halo(com(iproc)%jhalodispl(jproc)+i))
+      end do
+   end do
+end do
+
+end subroutine com_setup
+
+!----------------------------------------------------------------------
+! Subroutine: com_ext
+!> Purpose: communicate field to halo (extension)
+!----------------------------------------------------------------------
+subroutine com_ext(com,vec)
+
+implicit none
+
+! Passed variables
+type(comtype),intent(in) :: com !< Sampling data
+real(kind_real),allocatable,intent(inout) :: vec(:)    !< Subgrid variable
+
+! Local variables
+real(kind_real) :: sbuf(com%nexcl),rbuf(com%nhalo),vec_tmp(com%nred)
+
+! Check input vector size
+if (size(vec)/=com%nred) call msgerror('vector size inconsistent in com_ext')
+
+! Prepare buffers to send
+sbuf = vec(com%excl)
+
+! Communication
+call mpl_alltoallv(com%nexcl,sbuf,com%jexclcounts,com%jexcldispl,com%nhalo,rbuf,com%jhalocounts,com%jhalodispl)
+
+! Copy
+vec_tmp = vec
+
+! Reallocation
+deallocate(vec)
+allocate(vec(com%next))
+
+! Copy zone A into zone B
+vec(com%ired_to_iext) = vec_tmp
+
+! Copy halo into zone B
+vec(com%halo) = rbuf
+
+end subroutine com_ext
+
+!----------------------------------------------------------------------
+! Subroutine: com_red
+!> Purpose: communicate vector from halo (reduction)
+!----------------------------------------------------------------------
+subroutine com_red(com,vec)
+
+implicit none
+
+! Passed variables
+type(comtype),intent(in) :: com !< Sampling data
+real(kind_real),allocatable,intent(inout) :: vec(:)    !< Subgrid variable
+
+! Local variables
+real(kind_real) :: sbuf(com%nhalo),rbuf(com%nexcl),vec_tmp(com%next)
+
+! Check input vector size
+if (size(vec)/=com%next) then
+print*, size(vec),com%next
+call msgerror('vector size inconsistent in com_red')
+end if
+
+! Prepare buffers to send
+sbuf = vec(com%halo)
+
+! Communication
+call mpl_alltoallv(com%nhalo,sbuf,com%jhalocounts,com%jhalodispl,com%nexcl,rbuf,com%jexclcounts,com%jexcldispl)
+
+! Copy
+vec_tmp = vec
+
+! Reallocation
+deallocate(vec)
+allocate(vec(com%nred))
+
+! Copy zone B into zone A
+vec = vec_tmp(com%ired_to_iext)
+
+! Copy halo into zone B
+vec(com%excl) = vec(com%excl)+rbuf
+
+end subroutine com_red
 
 !----------------------------------------------------------------------
 ! Subroutine: com_read

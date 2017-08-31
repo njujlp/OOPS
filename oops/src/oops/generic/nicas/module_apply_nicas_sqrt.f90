@@ -10,11 +10,11 @@
 !----------------------------------------------------------------------
 module module_apply_nicas_sqrt
 
-use module_apply_com, only: alpha_com_AB,alpha_com_BA,alpha_com_AC,alpha_com_CA
 use module_apply_convol, only: convol
 use module_apply_interp, only: interp,interp_ad
 use module_namelist, only: nam
 use tools_kinds, only: kind_real
+use type_com, only: com_ext,com_red
 use type_mpl, only: mpl
 use type_ndata, only: ndatatype,ndataloctype
 
@@ -85,16 +85,16 @@ allocate(alpha_tmp(ndataloc%nsa))
 alpha_tmp = alpha
 
 ! Halo extension from zone A to zone C
-call alpha_com_AC(ndataloc,alpha_tmp)
+call com_ext(ndataloc%AC,alpha_tmp)
 
 ! Convolution
 call convol(ndataloc,alpha_tmp)
 
 ! Halo reduction from zone C to zone A
-call alpha_com_CA(ndataloc,alpha_tmp)
+call com_red(ndataloc%AC,alpha_tmp)
 
 ! Halo extension from zone A to zone B
-call alpha_com_AB(ndataloc,alpha_tmp)
+call com_ext(ndataloc%AB,alpha_tmp)
 
 ! Interpolation
 call interp(ndataloc,alpha_tmp,fld)
@@ -148,16 +148,16 @@ allocate(alpha_tmp(ndataloc%nsb))
 call interp_ad(ndataloc,fld,alpha_tmp)
 
 ! Halo reduction from zone B to zone A
-call alpha_com_BA(ndataloc,alpha_tmp)
+call com_red(ndataloc%AB,alpha_tmp)
 
 ! Halo extension from zone A to zone C
-call alpha_com_AC(ndataloc,alpha_tmp)
+call com_ext(ndataloc%AC,alpha_tmp)
 
 ! Convolution
 call convol(ndataloc,alpha_tmp)
 
 ! Halo reduction from zone C to zone A
-call alpha_com_CA(ndataloc,alpha_tmp)
+call com_red(ndataloc%AC,alpha_tmp)
 
 ! Copy
 alpha = alpha_tmp

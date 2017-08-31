@@ -16,8 +16,10 @@ use module_apply_nicas, only: apply_nicas
 use module_driver, only: nicas_driver
 use module_namelist, only: nam,namcheck
 use tools_display, only: listing_setup
+use type_geom, only: geomtype
 use type_mpl, only: mpl
-use type_ndata, only: ndatatype,ndataloctype
+use type_ndata, only: ndataloctype
+use type_randgen, only: rng,create_randgen
 use fckit_log_module, only : log
 
 implicit none
@@ -29,7 +31,7 @@ public nicas, create_nicas, delete_nicas, nicas_multiply
 !>  Derived type containing the data
 
 type nicas
-  type(ndatatype) :: ndata
+  type(geomtype) :: geom
   type(ndataloctype) :: ndataloc
   integer,allocatable :: ic0_dir(:)
   integer,allocatable :: ic0a_dir(:)
@@ -137,12 +139,16 @@ write(nprocchar,'(i4)') mpl%nproc
 write(nthreadchar,'(i4)') mpl%nthread
 call log%info("Parallel setup: "//nprocchar//" MPI tasks and "//nthreadchar//" OpenMP threads")
 
+! Initialize random number generator
+call log%info("Initialize random number generator")
+rng = create_randgen()
+
 ! Initialize coordinates
 call log%info("Initialize coordinates")
-call model_oops_coord(lats,lons,areas,levs,mask3d,mask2d,glbind,self%ndata)
+call model_oops_coord(lats,lons,areas,levs,mask3d,mask2d,glbind,self%geom)
 
 ! Call driver
-call nicas_driver(self%ndata,self%ndataloc)
+call nicas_driver(self%geom,self%ndataloc)
 
 ! Close listing files
 if ((mpl%main.and..not.nam%colorlog).or..not.mpl%main) close(unit=mpl%unit)

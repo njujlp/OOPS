@@ -10,12 +10,10 @@
 !----------------------------------------------------------------------
 module module_apply_interp
 
-use module_apply_com, only: alpha_com_AB
 use module_namelist, only: nam
 use omp_lib
 use tools_kinds,only: kind_real
 use tools_missing, only: msr
-use type_fields, only: fldtype,alphatype
 use type_linop, only: apply_linop,apply_linop_ad
 use type_ndata, only: ndatatype,ndataloctype
 

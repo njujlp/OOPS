@@ -15,6 +15,7 @@ use omp_lib
 use tools_display, only: msgerror,ddis,prog_init,prog_print
 use tools_kinds,only: kind_real
 use tools_missing, only: msr,isnotmsi,msi
+use tools_qsort, only: qsort
 use type_mpl, only: mpl,mpl_bcast,mpl_recv,mpl_send,mpl_barrier
 use type_ndata, only: ndatatype
 
@@ -207,7 +208,7 @@ do il0=1,ndata%nl0
       ! MPI offset
       ic0 = ic0_s(mpl%myproc)+ic0_loc-1
 
-      if (ndata%mask(ic0,il0)) then
+      if (ndata%geom%mask(ic0,il0)) then
          ! Allocation
          allocate(is_list(ineh(ic0,il0i)*maxval(inev(il0,:))*maxval(ines)))
          allocate(order(ineh(ic0,il0i)*maxval(inev(il0,:))*maxval(ines)))
