@@ -15,7 +15,7 @@
   },
   "Covariance": {
     "covariance": "ensemble",
-    "members": "5",
+    "members": "24",
     "variables": {
       "variables": "ci"
     },
@@ -34,7 +34,7 @@
       "check_adjoints": 1,
       "check_pos_def": 0,
       "check_mpi": 1,
-      "check_dirac": 1,
+      "check_dirac": 0,
       "check_perf": 0,
       "ndir": 3,
       "levdir": 1,
@@ -51,12 +51,12 @@
       "logpres": 0,
       "lsqrt": 0,
       "Lbh_file": "none",
-      "Lbh(1)": 3000.0e3,
-      "Lbh(2)": 3000.0e3,
+      "Lbh(1)": 250.0e3,
+      "Lbh(2)": 250.0e3,
       "Lbv_file": "none",
       "Lbv(1)": 0.4,
       "Lbv(2)": 0.4,
-      "resol": 6.0,
+      "resol": 8.0,
       "network": 0,
       "nproc": 1,
       "mpicom": 2
@@ -81,26 +81,98 @@
           {
             "filename" : "/glade/p/ral/nsap/jcsda/data/wrf/data/2017072800/wrfout_d01_2017-07-28_06:00:00.005",
             "date": "2017-07-28T00:00:00Z"
+          },
+          {
+            "filename" : "/glade/p/ral/nsap/jcsda/data/wrf/data/2017072800/wrfout_d01_2017-07-28_06:00:00.006",
+            "date": "2017-07-28T00:00:00Z"
+          },
+          {
+            "filename" : "/glade/p/ral/nsap/jcsda/data/wrf/data/2017072800/wrfout_d01_2017-07-28_06:00:00.007",
+            "date": "2017-07-28T00:00:00Z"
+          },
+          {
+            "filename" : "/glade/p/ral/nsap/jcsda/data/wrf/data/2017072800/wrfout_d01_2017-07-28_06:00:00.008",
+            "date": "2017-07-28T00:00:00Z"
+          },
+          {
+            "filename" : "/glade/p/ral/nsap/jcsda/data/wrf/data/2017072800/wrfout_d01_2017-07-28_12:00:00.001",
+            "date": "2017-07-28T00:00:00Z"
+          },
+          {
+            "filename" : "/glade/p/ral/nsap/jcsda/data/wrf/data/2017072800/wrfout_d01_2017-07-28_12:00:00.002",
+            "date": "2017-07-28T00:00:00Z"
+          },
+          {
+            "filename" : "/glade/p/ral/nsap/jcsda/data/wrf/data/2017072800/wrfout_d01_2017-07-28_12:00:00.003",
+            "date": "2017-07-28T00:00:00Z"
+          },
+          {
+            "filename" : "/glade/p/ral/nsap/jcsda/data/wrf/data/2017072800/wrfout_d01_2017-07-28_12:00:00.004",
+            "date": "2017-07-28T00:00:00Z"
+          },
+          {
+            "filename" : "/glade/p/ral/nsap/jcsda/data/wrf/data/2017072800/wrfout_d01_2017-07-28_12:00:00.005",
+            "date": "2017-07-28T00:00:00Z"
+          },
+          {
+            "filename" : "/glade/p/ral/nsap/jcsda/data/wrf/data/2017072800/wrfout_d01_2017-07-28_12:00:00.006",
+            "date": "2017-07-28T00:00:00Z"
+          },
+          {
+            "filename" : "/glade/p/ral/nsap/jcsda/data/wrf/data/2017072800/wrfout_d01_2017-07-28_12:00:00.007",
+            "date": "2017-07-28T00:00:00Z"
+          },
+          {
+            "filename" : "/glade/p/ral/nsap/jcsda/data/wrf/data/2017072800/wrfout_d01_2017-07-28_12:00:00.008",
+            "date": "2017-07-28T00:00:00Z"
+          },
+          {
+            "filename" : "/glade/p/ral/nsap/jcsda/data/wrf/data/2017072800/wrfout_d01_2017-07-28_18:00:00.001",
+            "date": "2017-07-28T00:00:00Z"
+          },
+          {
+            "filename" : "/glade/p/ral/nsap/jcsda/data/wrf/data/2017072800/wrfout_d01_2017-07-28_18:00:00.002",
+            "date": "2017-07-28T00:00:00Z"
+          },
+          {
+            "filename" : "/glade/p/ral/nsap/jcsda/data/wrf/data/2017072800/wrfout_d01_2017-07-28_18:00:00.003",
+            "date": "2017-07-28T00:00:00Z"
+          },
+          {
+            "filename" : "/glade/p/ral/nsap/jcsda/data/wrf/data/2017072800/wrfout_d01_2017-07-28_18:00:00.004",
+            "date": "2017-07-28T00:00:00Z"
+          },
+          {
+            "filename" : "/glade/p/ral/nsap/jcsda/data/wrf/data/2017072800/wrfout_d01_2017-07-28_18:00:00.005",
+            "date": "2017-07-28T00:00:00Z"
+          },
+          {
+            "filename" : "/glade/p/ral/nsap/jcsda/data/wrf/data/2017072800/wrfout_d01_2017-07-28_18:00:00.006",
+            "date": "2017-07-28T00:00:00Z"
+          },
+          {
+            "filename" : "/glade/p/ral/nsap/jcsda/data/wrf/data/2017072800/wrfout_d01_2017-07-28_18:00:00.007",
+            "date": "2017-07-28T00:00:00Z"
+          },
+          {
+            "filename" : "/glade/p/ral/nsap/jcsda/data/wrf/data/2017072800/wrfout_d01_2017-07-28_18:00:00.008",
+            "date": "2017-07-28T00:00:00Z"
           }
         ]
   },
   "dirac": {
     "ndir": 1,
-    "ixdir(1)": 20,
-    "iydir(1)": 10,
+    "ixdir(1)": 200,
+    "iydir(1)": 150,
     "ildir": 1,
     "ifdir": 1
   },
   "output_nicas": {
-    "datadir": "Data",
-    "exp": "dirac",
-    "type": "an",
+    "fileout" : "dirac_d01_2017-07-28_06:00:00",
     "date": "2009-12-31T00:00:00Z"
   },
   "output_Bens": {
-    "datadir": "Data",
-    "exp": "Bens",
-    "type": "an",
+    "fileout" : "bens_d01_2017-07-28_06:00:00",
     "date": "2009-12-31T00:00:00Z"
   },
   "TestDate": "2009-12-31T00:00:00Z",
