@@ -1037,7 +1037,8 @@ end subroutine dirac
              jk = jk + 1
           end do
 
-!      write(*,*) 'Processing point ',self%geom%lon(jx,jy),'E, ',self%geom%lat(1,jy),'N'
+!      write(*,'(3I4,2(A,F10.5,A))') jx,jy,jz,' lon = ',self%geom%lon(jx,jy),'E, ',' lat = ',self%geom%lat(1,jy),'N'
+
 !> Add the point on the unstructured grid
           call add_column(ug, self%geom%lat(jx,jy), self%geom%lon(jx,jy), &
                area, &
