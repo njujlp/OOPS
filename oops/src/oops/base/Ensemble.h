@@ -77,7 +77,7 @@ template<typename MODEL> class Ensemble {
 template<typename MODEL>
 Ensemble<MODEL>::Ensemble(const util::DateTime & validTime, const eckit::Configuration & conf)
   : config_(conf), validTime_(validTime), resol_(),
-    vars_(eckit::LocalConfiguration(conf, "variables")),
+    vars_(eckit::LocalConfiguration(conf, "variables3d")),
     rank_(conf.getInt("members")),
     ensemblePerturbs_()
 {

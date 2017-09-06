@@ -60,7 +60,7 @@ template <typename MODEL> class Dirac : public Application {
     Log::info() << "Setup resolution OK" << std::endl;
 
 //  Setup variables
-    const eckit::LocalConfiguration varConfig(fullConfig, "variables");
+    const eckit::LocalConfiguration varConfig(fullConfig, "variables3d");
     const Variables_ vars(varConfig);
     Log::info() << "Setup variables OK" << std::endl;
 

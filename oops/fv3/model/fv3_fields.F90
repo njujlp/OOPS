@@ -851,6 +851,8 @@ type(unstructured_grid), intent(inout) :: ug
 real(kind=kind_real) :: zz(self%nl)
 integer :: jx,jy,jl,jf,joff,j
 integer :: cmask(self%nl)
+INTEGER :: glbind,glbbeg
+
 
 do jl=1,self%nl
   zz(jl) = real(jl,kind=kind_real)
@@ -858,16 +860,21 @@ enddo
 call create_unstructured_grid(ug, self%nl, zz)
 
 cmask = 1
+
+glbbeg=self%pe*self%geom%nx*self%geom%ny
+
 do jy=1,self%geom%ny
   do jx=1,self%geom%nx
+    glbind = glbbeg+(jy-1)*self%geom%nx+jx
+
     CALL add_column(ug, self%geom%lat(jx,jy), self%geom%lon(jx,jy), &
-         &self%geom%area(jx,jy), self%nl, self%nf3d, 0, cmask, 1)
+         &self%geom%area(jx,jy), self%nl, self%nf3d, 0, cmask, 1,glbind)
     j = 0
     do jf=1,self%nf3d
       joff = (jf-1)*self%nl
       do jl=1,self%nl
          j = j+1
-         ug%last%column%cols(j) = self%gfld(jx,jy,joff+jl)
+         ug%last%column%fld3d(j) = self%gfld(jx,jy,joff+jl)
       enddo
     enddo
   enddo
@@ -893,7 +900,7 @@ do jy=1,self%geom%ny
       joff = (jf-1)*self%nl
       do jl=1,self%nl
          j = j+1
-         self%gfld(jx,jy,joff+jl) = current%column%cols(j)
+         self%gfld(jx,jy,joff+jl) = current%column%fld3d(j)
       enddo
     enddo
     current => current%next
