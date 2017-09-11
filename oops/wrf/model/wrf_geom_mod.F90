@@ -8,6 +8,7 @@ use config_mod
 use kinds
 use tools_nc
 use string_f_c_mod
+use type_mpl, only: mpl
 use netcdf
 
 implicit none
@@ -36,6 +37,7 @@ type :: wrf_geom
   real(kind=kind_real), DIMENSION (:,:), ALLOCATABLE :: mask
   real(kind=kind_real), DIMENSION (:),   ALLOCATABLE :: levs
 ! real(kind=kind_real), DIMENSION (:),   ALLOCATABLE :: pres
+  integer,DIMENSION (:,:), ALLOCATABLE :: iproc(:,:)
 end type wrf_geom
 
 #define LISTED_TYPE wrf_geom
@@ -63,6 +65,7 @@ type(wrf_geom), pointer :: self
 
 !type(datetime), intent(inout) :: vdate    !< DateTime
 
+integer :: ix,nx_loc,ix_loc,iproc
 integer :: ncid,nlon_id,nlat_id,nlev_id
 integer :: lon_id,lat_id,mask_id,levs_id,pres_id
 character (len=max_string_length) :: subr
@@ -110,6 +113,7 @@ allocate(self%lat(self%nlon,self%nlat))
 allocate(self%mask(self%nlon,self%nlat))
 allocate(self%levs(self%nlev))
 !allocate(self%pres(self%nlev))
+allocate(self%iproc(self%nlon,self%nlat))
 
 !> Read longitude XLONG
 call ncerr(subr,nf90_inq_varid(ncid,'XLONG',lon_id))
@@ -138,6 +142,20 @@ write (*,*) "ZNU = ",self%levs(1)
 
 !> close file
 call ncerr(subr,nf90_close(ncid))
+
+! Artificial grid distribution for tests
+nx_loc = self%nlon/mpl%nproc
+if (nx_loc*mpl%nproc<self%nlon) nx_loc = nx_loc+1
+ix_loc = 1
+iproc = 1
+do ix=1,self%nlon
+   self%iproc(ix,:) = iproc
+   ix_loc = ix_loc+1
+   if (ix_loc>nx_loc) then
+      ix_loc = 1
+      iproc = iproc+1
+   end if
+end do
 
 
 end subroutine c_wrf_geo_setup
@@ -169,6 +187,7 @@ other%lat = self%lat
 other%mask = self%mask
 other%levs = self%levs
 !other%pres = self%pres
+other%iproc = self%iproc
 
 end subroutine c_wrf_geo_clone
 
@@ -186,6 +205,7 @@ type(wrf_geom), pointer :: self
     if (allocated(self%mask)) deallocate(self%mask)
 !   if (allocated(self%pres)) deallocate(self%pres)
     if (allocated(self%levs)) deallocate(self%levs)
+    if (allocated(self%iproc)) deallocate(self%iproc)
     call wrf_geom_registry%remove(c_key_self)
 
 end subroutine c_wrf_geo_delete

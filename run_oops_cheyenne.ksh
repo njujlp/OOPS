@@ -33,4 +33,5 @@ cd ${OOPSDIR}/build/oops/${model}/test
 export OMP_NUM_THREADS=9
 
 # Run!
-mpirun ${OOPSDIR}/build/bin/${model}_dirac.x testinput/dirac.nicas.json
+#mpirun ${OOPSDIR}/build/bin/${model}_dirac.x testinput/dirac.nicas.json
+${OOPSDIR}/build/bin/${model}_dirac.x testinput/dirac.nicas.json

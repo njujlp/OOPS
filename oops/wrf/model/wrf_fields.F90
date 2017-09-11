@@ -11,6 +11,7 @@ use kinds
 use tools_nc
 use string_f_c_mod
 use datetime_mod
+use type_mpl, only: mpl,mpl_recv,mpl_send,mpl_bcast
 use netcdf
 
 implicit none
@@ -1042,6 +1043,8 @@ end subroutine dirac
 
 !      write(*,'(3I4,2(A,F10.5,A))') jx,jy,jz,' lon = ',self%geom%lon(jx,jy),'E, ',' lat = ',self%geom%lat(1,jy),'N'
 
+!> Add column only for a given MPI task
+!FCV          if (self%geom%iproc(jx,jy)==mpl%myproc) then
 !> Add the point on the unstructured grid
           call add_column(ug, self%geom%lat(jx,jy), self%geom%lon(jx,jy), &
                area, &
@@ -1053,7 +1056,7 @@ end subroutine dirac
 !              0)
           ug%last%column%fld3d(:) = vv(:)
 !         ug%last%column%cols(:) = vv(:)
-
+!FCV          endif ! mpl%myproc
        enddo
     enddo
 
@@ -1078,6 +1081,8 @@ end subroutine dirac
     integer :: jx,jy,jz,jk
     integer :: n_vars       ! Number of 3D variables 
     integer :: n_surf_vars  ! Number of surf vars (sould be 0 for ocean/ice)
+    integer :: nbuf,jbuf,iproc
+    real(kind=kind_real),allocatable :: rbuf(:),sbuf(:)
 
 !> convert_from_ug: code inverse of convert_to_ug
 
@@ -1094,6 +1099,9 @@ end subroutine dirac
     do jy=1,self%ny
        do jx=1,self%nx
 
+!> Get column only for a given MPI task
+!FCV          if (self%geom%iproc(jx,jy)==mpl%myproc) then
+
 !> initialize counter
           jk = 1
 
@@ -1104,8 +1112,96 @@ end subroutine dirac
           end do
 
           current => current%next
+!FCV          endif ! mpl%myproc
+
        enddo
     enddo
+
+
+! Communication
+!FCVif (mpl%main) then
+
+!FCV   do iproc=1,mpl%nproc
+
+!FCV      if (iproc/=mpl%ioproc) then
+
+         ! Allocation
+!FCV         nbuf = count(self%geom%iproc==iproc)*self%nf*self%nz
+!FCV         allocate(rbuf(nbuf))
+
+         ! Receive data on ioproc
+!FCV         call mpl_recv(nbuf,rbuf,iproc,mpl%tag)
+
+         ! Format data
+!FCV         jbuf = 0
+!FCV         do jy=1,self%ny
+!FCV           do jx=1,self%ny
+
+!FCV             if (self%geom%iproc(jx,jy)==iproc) then
+
+              ! initialize vertical counter
+!FCV                 jk = 1
+
+                ! Copy one 3d field at the time
+!FCV                 do jz = 1,self%nz
+!FCV                    jbuf = jbuf+1
+!FCV                    self%T(jx,jy,jz) = rbuf(jbuf)
+!FCV                    jk = jk + 1
+!FCV                 end do
+
+!FCV             endif
+
+!FCV           enddo
+!FCV         enddo
+
+         ! Release memory
+!FCV         deallocate(rbuf)
+
+!FCV      end if
+!FCV   end do
+
+!FCVelse
+         ! Allocation
+!FCV         nbuf = count(self%geom%iproc==mpl%myproc)*self%nf*self%nz
+!FCV         allocate(sbuf(nbuf))
+
+         ! Receive data on ioproc
+!FCV         call mpl_recv(nbuf,rbuf,iproc,mpl%tag)
+
+         ! Format data
+!FCV         jbuf = 0
+!FCV         do jy=1,self%ny
+!FCV           do jx=1,self%nx
+
+!FCV             if (self%geom%iproc(jx,jy)==mpl%myproc) then
+
+              ! initialize vertical counter
+!FCV                 jk = 1
+
+!FCV                ! Copy one 3d field at the time
+!FCV                 do jz = 1,self%nz
+!FCV                    jbuf = jbuf+1
+!FCV                    self%T(jx,jy,jz) = sbuf(jbuf)
+!FCV                    jk = jk + 1
+!FCV                 end do
+
+!FCV             endif
+
+!FCV            enddo
+!FCV         enddo
+
+         ! Send data to ioproc
+!FCV         call mpl_send(nbuf,sbuf,mpl%ioproc,mpl%tag)
+
+         ! Release memory
+!FCV         deallocate(sbuf)
+
+!FCVend if
+
+!FCVmpl%tag = mpl%tag+1
+
+! Broadcast
+!FCVcall mpl_bcast(self%gfld3d,mpl%ioproc)
 
   return
   end subroutine convert_from_ug
