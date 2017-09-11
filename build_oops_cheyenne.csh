@@ -8,7 +8,7 @@
 #  setenv LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${BOOST_ROOT}/stage/lib"
 #------------------------------------------------------------------------------#
 
-#git clone https://github.com/JCSDA/OOPS.git
+#git clone https://github.com/JCSDA/OOPS
 #cd OOPS
 
 # enable modules

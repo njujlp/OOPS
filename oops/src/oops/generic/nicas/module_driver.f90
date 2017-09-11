@@ -76,7 +76,9 @@ if (nam%new_param) then
    write(mpl%unit,'(a)') '-------------------------------------------------------------------'
    write(mpl%unit,'(a)') '--- Compute NICAS normalization'
 
-   call compute_normalization(ndata)
+!   call compute_normalization(ndata)
+allocate(ndata%norm(ndata%nc0,ndata%nl0))
+ndata%norm = 1.0
 
    if (mpl%main) then
       !----------------------------------------------------------------------
