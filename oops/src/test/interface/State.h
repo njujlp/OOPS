@@ -103,17 +103,6 @@ template <typename MODEL> void testStateConstructor() {
 
 // -----------------------------------------------------------------------------
 
-template <typename MODEL> void testStateWrite() {
-  typedef StateFixture<MODEL>   Test_;
-  typedef oops::State<MODEL>    State_;
-  const eckit::LocalConfiguration conf(TestEnvironment::config(), "State");
-
-  boost::scoped_ptr<State_> xx(new State_(Test_::xref()));
-  xx->write(conf);
-}
-
-// -----------------------------------------------------------------------------
-
 template <typename MODEL> void testStateCopyConstructor() {
   typedef StateFixture<MODEL>   Test_;
   typedef oops::State<MODEL>    State_;
@@ -145,7 +134,6 @@ template <typename MODEL> class State : public oops::Test {
     boost::unit_test::test_suite * ts = BOOST_TEST_SUITE("interface/State");
 
     ts->add(BOOST_TEST_CASE(&testStateConstructor<MODEL>));
-    ts->add(BOOST_TEST_CASE(&testStateWrite<MODEL>));
     ts->add(BOOST_TEST_CASE(&testStateCopyConstructor<MODEL>));
 
     boost::unit_test::framework::master_test_suite().add(ts);
