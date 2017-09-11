@@ -14,10 +14,13 @@ use unstructured_grid_mod
 use model_oops, only: model_oops_coord
 use module_apply_nicas, only: apply_nicas
 use module_driver, only: nicas_driver
-use module_namelist, only: nam,namcheck
+use module_namelist, only: namtype,namcheck
 use tools_display, only: listing_setup
+use tools_missing, only: msi,msr
+use type_geom, only: geomtype
 use type_mpl, only: mpl
-use type_ndata, only: ndatatype,ndataloctype
+use type_ndata, only: ndataloctype
+use type_randgen, only: rng,create_randgen
 use fckit_log_module, only : log
 
 implicit none
@@ -29,7 +32,8 @@ public nicas, create_nicas, delete_nicas, nicas_multiply
 !>  Derived type containing the data
 
 type nicas
-  type(ndatatype) :: ndata
+  type(namtype) :: nam
+  type(geomtype) :: geom
   type(ndataloctype) :: ndataloc
   integer,allocatable :: ic0_dir(:)
   integer,allocatable :: ic0a_dir(:)
@@ -57,16 +61,17 @@ contains
 !  C++ interfaces
 ! ------------------------------------------------------------------------------
 
-subroutine create_nicas_c(key, c_conf, cnh, clats, clons, careas, cnv, clevs, ccmask) bind(c, name='create_nicas_f90')
+subroutine create_nicas_c(key, c_conf, cnh, clats, clons, careas, cnv, clevs, cmask3d, cmask2d, cglbind) &
+ & bind(c, name='create_nicas_f90')
 implicit none
 integer(c_int), intent(inout) :: key
 type(c_ptr), intent(in) :: c_conf
 integer(c_int), intent(in) :: cnh, cnv
 real(c_double), intent(in) :: clats(cnh), clons(cnh), careas(cnh), clevs(cnv)
-integer(c_int), intent(in) :: ccmask(cnh*cnv)
+integer(c_int), intent(in) :: cmask3d(cnh*cnv), cmask2d(cnh), cglbind(cnh)
 type(nicas), pointer :: self
 real(kind=kind_real) :: lats(cnh), lons(cnh), areas(cnh), levs(cnv)
-integer :: cmask(cnh*cnv)
+integer :: mask3d(cnh*cnv), mask2d(cnh), glbind(cnh)
 call nicas_registry%init()
 call nicas_registry%add(key)
 call nicas_registry%get(key,self)
@@ -74,9 +79,10 @@ lats(:)=clats(:)
 lons(:)=clons(:)
 areas(:)=careas(:)
 levs(:)=clevs(:)
-cmask(:)=ccmask(:)
-
-call create_nicas(self, c_conf, lats, lons, areas, levs, cmask)
+mask3d(:)=cmask3d(:)
+mask2d(:)=cmask2d(:)
+glbind(:)=cglbind(:)
+call create_nicas(self, c_conf, lats, lons, areas, levs, mask3d, mask2d, glbind)
 end subroutine create_nicas_c
 
 ! ------------------------------------------------------------------------------
@@ -107,13 +113,13 @@ end subroutine nicas_multiply_c
 !  End C++ interfaces
 ! ------------------------------------------------------------------------------
 
-subroutine create_nicas(self, c_conf, lats, lons, areas, levs, mask)
+subroutine create_nicas(self, c_conf, lats, lons, areas, levs, mask3d, mask2d, glbind)
 implicit none
 type(nicas), intent(inout) :: self
 type(c_ptr), intent(in) :: c_conf
 real(kind=kind_real), intent(in) :: lats(:), lons(:), areas(:), levs(:)
-integer, intent(in) :: mask(:)
-integer :: nc0,nlev
+integer, intent(in) :: mask3d(:), mask2d(:), glbind(:)
+integer :: nlev
 character(len=4) :: myprocchar,nprocchar,nthreadchar
 
 ! NICAS setup
@@ -121,29 +127,33 @@ call log%info("NICAS setup")
 
 ! Read JSON
 call log%info("Read JSON")
-call nicas_read_conf(c_conf)
+call nicas_read_conf(c_conf,self%nam)
 
 ! Setup display
 call log%info("Listing setup")
-call listing_setup(nam%colorlog)
+call listing_setup(self%nam%colorlog)
 
 ! Check namelist parameters
-call namcheck
+call namcheck(self%nam)
 
 ! Write parallel setup
 write(nprocchar,'(i4)') mpl%nproc
 write(nthreadchar,'(i4)') mpl%nthread
 call log%info("Parallel setup: "//nprocchar//" MPI tasks and "//nthreadchar//" OpenMP threads")
 
+! Initialize random number generator
+call log%info("Initialize random number generator")
+rng = create_randgen(self%nam)
+
 ! Initialize coordinates
 call log%info("Initialize coordinates")
-call model_oops_coord(lats,lons,areas,levs,mask,self%ndata)
+call model_oops_coord(self%nam,lats,lons,areas,levs,mask3d,mask2d,glbind,self%geom)
 
 ! Call driver
-call nicas_driver(self%ndata,self%ndataloc)
+call nicas_driver(self%nam,self%geom,self%ndataloc)
 
 ! Close listing files
-if ((mpl%main.and..not.nam%colorlog).or..not.mpl%main) close(unit=mpl%unit)
+if ((mpl%main.and..not.self%nam%colorlog).or..not.mpl%main) close(unit=mpl%unit)
 
 call log%info('NICAS setup done')
 
@@ -151,11 +161,53 @@ end subroutine create_nicas
 
 !-------------------------------------------------------------------------------
 
-subroutine nicas_read_conf(c_conf)
+subroutine nicas_read_conf(c_conf,nam)
 implicit none
 type(c_ptr), intent(in) :: c_conf
+type(namtype), intent(out) :: nam
 integer :: il,idir
 character(len=3) :: ilchar,idirchar
+
+! Default initialization
+
+! general_param
+nam%datadir = ''
+nam%prefix = ''
+nam%colorlog = .false.
+nam%model = ''
+call msi(nam%nl)
+call msi(nam%levs)
+nam%new_param = .false.
+nam%new_mpi = .false.
+nam%check_adjoints = .false.
+nam%check_pos_def = .false.
+nam%check_mpi = .false.
+nam%check_dirac = .false.
+nam%check_dirac = .false.
+call msi(nam%ndir)
+call msi(nam%levdir)
+call msr(nam%londir)
+call msr(nam%latdir)
+
+! sampling_param
+nam%sam_default_seed = .false.
+nam%mask_check = .false.
+call msi(nam%ntry)
+call msi(nam%nrep)
+nam%logpres = .false.
+
+! nicas_param
+nam%lsqrt = .false.
+nam%Lbh_file = ''
+call msr(nam%Lbh)
+nam%Lbv_file = ''
+call msr(nam%Lbv)
+call msr(nam%resol)
+nam%network = .false.
+call msi(nam%nproc)
+call msi(nam%mpicom)
+
+! Setup from configuration
 
 ! general_param
 nam%datadir = config_get_string(c_conf,1024,"datadir")
@@ -203,7 +255,7 @@ do il=1,nam%nl
 end do
 nam%resol = config_get_real(c_conf,"resol")
 nam%network = integer_to_logical(config_get_int(c_conf,"network"))
-nam%nproc = config_get_int(c_conf,"nproc")
+nam%nproc = mpl%nproc ! Not read in the JSON file
 nam%mpicom = config_get_int(c_conf,"mpicom")
 
 end subroutine nicas_read_conf
@@ -238,7 +290,7 @@ subroutine nicas_multiply(self,dx)
 implicit none
 type(nicas), intent(in) :: self
 type(unstructured_grid), intent(inout) :: dx
-integer :: ivars,ic0a
+integer :: ivar,ic0a
 real(kind_real) :: fld(self%ndataloc%nc0a,self%ndataloc%nl0)
 type(column_element), pointer :: current
 
@@ -246,33 +298,30 @@ type(column_element), pointer :: current
 call log%info("NICAS multiply")
 
 ! Loop over 3D variables
-do ivars=1,dx%head%column%nvars
+do ivar=1,dx%head%column%nvar3d
    ! Copy field
    ic0a = 0
    current => dx%head
    do while (associated(current))
       ic0a = ic0a+1
-      fld(ic0a,:) = current%column%cols((ivars-1)*self%ndataloc%nl0+1:ivars*self%ndataloc%nl0)
+      fld(ic0a,:) = current%column%fld3d((ivar-1)*self%ndataloc%nl0+1:ivar*self%ndataloc%nl0)
       current => current%next
    end do
 
    ! Apply NICAS
-   call apply_nicas(self%ndataloc,fld)
+   call apply_nicas(self%nam,self%ndataloc,fld)
 
    ! Return to columns
    ic0a = 0
    current => dx%head
    do while (associated(current))
       ic0a = ic0a+1
-      current%column%cols((ivars-1)*self%ndataloc%nl0+1:ivars*self%ndataloc%nl0) = fld(ic0a,:)
+      current%column%fld3d((ivar-1)*self%ndataloc%nl0+1:ivar*self%ndataloc%nl0) = fld(ic0a,:)
       current => current%next
    end do
 enddo
 
-! Loop over 2D variables
-!do ivars=1,dx%head%column%nsurfs
-! TODO
-!end do
+! TODO: do something for 2D variables
 
 end subroutine nicas_multiply
 

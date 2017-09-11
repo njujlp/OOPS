@@ -14,6 +14,7 @@ use omp_lib
 use tools_display, only: msgerror,prog_init,prog_print
 use tools_kinds, only: kind_real
 use tools_missing, only: msi,msr,isnotmsi,isnotmsr
+use tools_stripack, only: trans,trmesh
 use type_mpl, only: mpl,mpl_send,mpl_recv,mpl_bcast
 use type_randgen, only: randgentype,rand_integer
 
@@ -81,13 +82,14 @@ if (lred) then
    ! Allocation
    allocate(done(n_loc(mpl%myproc)))
 
-   write(mpl%unit,'(a10,a)',advance='no') '','Look for redundant points: '
+   ! Loop over points
+   write(mpl%unit,'(a7,a)',advance='no') '','Look for redundant points: '
    call prog_init(progint,done)
    !$omp parallel do private(i_loc,i,j)
    do i_loc=1,n_loc(mpl%myproc)
       i = i_glb(i_loc,mpl%myproc)
       do j=1,i-1
-         if ((abs(lon(i)-lon(j))<tiny(1.0)).and.(abs(lat(i)-lat(j))<tiny(1.0))) then
+         if (.not.(abs(lon(i)-lon(j))>0.0).and..not.(abs(lat(i)-lat(j))>0.0)) then
             mesh%redundant(i) = j
             exit
          end if
@@ -101,22 +103,19 @@ if (lred) then
    ! Communication
    if (mpl%main) then 
       do iproc=1,mpl%nproc
-         ! Allocation
-         allocate(rbuf(n_loc(iproc)))
+         if (iproc/=mpl%ioproc) then
+            ! Allocation
+            allocate(rbuf(n_loc(iproc)))
 
-         if (iproc==mpl%ioproc) then
-            ! Copy data
-            rbuf = mesh%redundant(i_glb(1:n_loc(iproc),iproc))
-         else
             ! Receive data on ioproc
             call mpl_recv(n_loc(iproc),rbuf,iproc,mpl%tag)
+
+            ! Format data
+            mesh%redundant(i_glb(1:n_loc(iproc),iproc)) = rbuf
+
+            ! Release memory
+            deallocate(rbuf)
          end if
-
-         ! Format data
-         mesh%redundant(i_glb(1:n_loc(iproc),iproc)) = rbuf
-
-         ! Release memory
-         deallocate(rbuf)
       end do
    else
       ! Allocation
@@ -159,7 +158,7 @@ do j=1,n
    end if
 end do
 do i=mesh%nnr,2,-1
-   call rand_integer(randgen,1,mesh%nnr,j)
+   call rand_integer(randgen,1,mesh%nnr,.true.,j)
    k = mesh%order(j)
    mesh%order(j) = mesh%order(i)
    mesh%order(i) = k
