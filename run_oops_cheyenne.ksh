@@ -15,7 +15,7 @@ module purge
 module load gnu netcdf openmpi
 
 # Set the model to test (qg, wrf or mom5cice5)
-model=wrf
+model=qg
 
 # By default, test dir is current dir
 if [ ! "${PBS_O_WORKDIR:-unset}" ]

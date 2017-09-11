@@ -982,8 +982,8 @@ call zeros(self)
 ioff = (ifdir-1)*self%nz
 
 do idir=1,ndir
-!  self%P(ixdir(idir),iydir(idir),ioff+ildir) = 1.0
-!  self%H(ixdir(idir),iydir(idir),ioff+ildir) = 1.0
+   self%P(ixdir(idir),iydir(idir),ioff+ildir) = 1.0
+   self%H(ixdir(idir),iydir(idir),ioff+ildir) = 1.0
    self%T(ixdir(idir),iydir(idir),ioff+ildir) = 1.0
    self%Q(ixdir(idir),iydir(idir),ioff+ildir) = 1.0
    self%U(ixdir(idir),iydir(idir),ioff+ildir) = 1.0
@@ -1002,11 +1002,11 @@ end subroutine dirac
     type(wrf_field), intent(in) :: self
     type(unstructured_grid), intent(inout) :: ug
     real(kind=kind_real), allocatable :: zz(:)
-    real(kind=kind_real), allocatable :: vv(:)
     integer, allocatable :: cmask(:)
     real(kind=kind_real)  :: area
     real(kind=kind_real)  :: zero = 0.
-    integer :: jx,jy,jz,jk,glbind
+    integer :: jx,jy,jz
+    integer :: jbuf,glbind
     integer :: nz_total     ! Total number of levels in the 3D fields
     integer :: n_vars       ! Number of 3D variables 
     integer :: n_surf_vars  ! Number of surf vars (sould be 0 for ocean/ice)
@@ -1018,70 +1018,70 @@ end subroutine dirac
 !> Need the grid box area in m2
    area = self%geom%DX * self%geom%DY
 
-!> Start with only one var
-    n_vars = 1      
 !> No surface var
     n_surf_vars = 0 
 
-    nz_total = self%nz
+!> Number of 3d-variables
+    n_vars = 2
+
+!> Number of vertical levels times 3d-variables
+    nz_total = self%nz*n_vars
 
 !> Allocate memory for 3d fields
-    allocate(zz(nz_total))
-    allocate(vv(nz_total))
-    allocate(cmask(nz_total))
+    allocate(zz(self%nz))
+    allocate(cmask(self%nz))
 
 !> Load vertical level distribution
-    do jz = 1,nz_total
+    do jz = 1,self%nz
        zz(jz) = real(self%geom%levs(jz))
     end do
 
+!> Do not mask
+    cmask = 1
+
 !> Create an ustructured grid 
-    call create_unstructured_grid(ug, nz_total, zz)
+    call create_unstructured_grid(ug, self%nz, zz)
 
 !> Loop on horizontal dimensions
     do jy=1,self%ny
-
-!      write(*,*) 'Processing latitude ',self%geom%lat(1,jy)
 
        do jx=1,self%nx
 
 !> Define a global index
           glbind = (jy-1)*self%nx+jx
 
-!         write(*,*) mpl%myproc,glbind,self%geom%iproc(jx,jy)
 !> Add column only for a given MPI task
           if (self%geom%iproc(jx,jy)==mpl%myproc) then
-
-!> Initialise counter
-          jk = 1
-
-!> Load first variable T
-          do jz = 1,self%nz                            ! T
-!            cmask(jk) = int(self%geom%mask(jx,jy))    ! Do not use land mask
-             cmask(jk) = 1
-             vv(jk) = self%T(jx,jy,jz)
-             jk = jk + 1
-          end do
-
-!      write(*,'(3I4,2(A,F10.5,A))') jx,jy,jz,' lon = ',self%geom%lon(jx,jy),'E, ',' lat = ',self%geom%lat(1,jy),'N'
 
 !> Add the point on the unstructured grid
           call add_column(ug, self%geom%lat(jx,jy), self%geom%lon(jx,jy), &
                area, &
-               nz_total, &
+               self%nz, &
                n_vars, &
                n_surf_vars, &
                cmask, &
                1, glbind)
-!              0)
-          ug%last%column%fld3d(:) = vv(:)
-!         ug%last%column%cols(:) = vv(:)
+
+!> Initialise counter
+               jbuf = 1
+
+!> Load first variable T
+               do jz = 1,self%nz
+                  ug%last%column%fld3d(jbuf) = self%U(jx,jy,jz)
+                  jbuf = jbuf + 1
+               end do
+               if (n_vars >= 2) then
+               do jz = 1,self%nz
+                  ug%last%column%fld3d(jbuf) = self%V(jx,jy,jz)
+                  jbuf = jbuf + 1
+               end do
+               endif
+
           endif ! mpl%myproc
        enddo
     enddo
 
     deallocate(zz)
-    deallocate(vv)
     deallocate(cmask)
 
   return
@@ -1098,7 +1098,7 @@ end subroutine dirac
     type(unstructured_grid), intent(in) :: ug
     type(column_element), pointer :: current
     real(kind=kind_real) :: dx, dy
-    integer :: jx,jy,jz,jk
+    integer :: jx,jy,jz
     integer :: n_vars       ! Number of 3D variables 
     integer :: n_surf_vars  ! Number of surf vars (sould be 0 for ocean/ice)
     integer :: nbuf,jbuf,iproc
@@ -1108,11 +1108,13 @@ end subroutine dirac
 
     print *,'in convert from ug ............'
 
-!> Start with only one var
-    n_vars = 1      
 !> No surface var
     n_surf_vars = 0
 
+!> Number of 3d-variables
+    n_vars = 2      
+
+!> Initialize pointer
     current => ug%head
 
 !> Loop over horizontal grid
@@ -1120,23 +1122,28 @@ end subroutine dirac
        do jx=1,self%nx
 
 !> Get column only for a given MPI task
-              if (self%geom%iproc(jx,jy)==mpl%myproc) then
+          if (self%geom%iproc(jx,jy)==mpl%myproc) then
 
 !> initialize counter
-          jk = 1
+          jbuf = 1
 
-          do jz = 1,self%nz                                          ! T
-!            self%T(jx,jy,jz) = current%column%cols(jk)
-             self%T(jx,jy,jz) = current%column%fld3d(jk)
-             jk = jk + 1
+          do jz = 1,self%nz
+             self%U(jx,jy,jz) = current%column%fld3d(jbuf)
+             jbuf = jbuf + 1
           end do
+          if (n_vars >= 2) then
+          do jz = 1,self%nz
+             self%V(jx,jy,jz) = current%column%fld3d(jbuf)
+             jbuf = jbuf + 1
+          end do
+          endif
 
           current => current%next
-              endif ! mpl%myproc
 
-       enddo
-    enddo
+          endif ! mpl%myproc
 
+       enddo ! jx
+    enddo ! jy
 
 ! Communication
     if (mpl%main) then
@@ -1160,14 +1167,18 @@ end subroutine dirac
                  if (self%geom%iproc(jx,jy)==iproc) then
 
               ! initialize vertical counter
-                     jk = 1
 
                 ! Copy one 3d field at the time
                      do jz = 1,self%nz
                         jbuf = jbuf+1
-                        self%T(jx,jy,jz) = rbuf(jbuf)
-                        jk = jk + 1
+                        self%U(jx,jy,jz) = rbuf(jbuf)
                      end do
+                     if (n_vars >= 2) then
+                     do jz = 1,self%nz
+                        jbuf = jbuf+1
+                        self%V(jx,jy,jz) = rbuf(jbuf)
+                     end do
+                     endif
 
                  endif
 
@@ -1193,14 +1204,18 @@ end subroutine dirac
                  if (self%geom%iproc(jx,jy)==mpl%myproc) then
 
               ! initialize vertical counter
-                     jk = 1
 
                     ! Copy one 3d field at the time
                      do jz = 1,self%nz
                         jbuf = jbuf+1
-                        sbuf(jbuf) = self%T(jx,jy,jz)
-                        jk = jk + 1
+                        sbuf(jbuf) = self%U(jx,jy,jz)
                      end do
+                     if (n_vars >= 2) then
+                     do jz = 1,self%nz
+                        jbuf = jbuf+1
+                        sbuf(jbuf) = self%V(jx,jy,jz)
+                     end do
+                     endif
 
                  endif
 
@@ -1218,7 +1233,8 @@ end subroutine dirac
     mpl%tag = mpl%tag+1
 
 ! Broadcast
-    call mpl_bcast(self%T,mpl%ioproc)
+    call mpl_bcast(self%U,mpl%ioproc)
+    call mpl_bcast(self%V,mpl%ioproc)
 
   return
   end subroutine convert_from_ug
