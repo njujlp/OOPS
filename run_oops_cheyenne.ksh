@@ -17,8 +17,7 @@ module load gnu netcdf openmpi
 # Set the model to test (qg, wrf or mom5cice5)
 model=wrf
 
-# Go to test directory
-#OOPSDIR=/glade/u/home/menetrie/OOPS
+# By default, test dir is current dir
 if [ ! "${PBS_O_WORKDIR:-unset}" ]
 then
     OOPSDIR=$PBS_O_WORKDIR
@@ -27,11 +26,14 @@ else
     OOPSDIR=$PWD
 fi
 
+# Or define here the test directory
+#OOPSDIR=/glade/u/home/menetrie/OOPS
+
+# Go to test directory
 cd ${OOPSDIR}/build/oops/${model}/test
 
 # Specify number of OpenMP threads
 export OMP_NUM_THREADS=9
 
 # Run!
-#mpirun ${OOPSDIR}/build/bin/${model}_dirac.x testinput/dirac.nicas.json
-${OOPSDIR}/build/bin/${model}_dirac.x testinput/dirac.nicas.json
+mpirun ${OOPSDIR}/build/bin/${model}_dirac.x testinput/dirac.nicas.json
