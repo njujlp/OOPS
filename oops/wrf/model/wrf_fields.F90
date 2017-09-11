@@ -987,7 +987,7 @@ end subroutine dirac
     integer, allocatable :: cmask(:)
     real(kind=kind_real)  :: area
     real(kind=kind_real)  :: zero = 0.
-    integer :: jx,jy,jz,jk
+    integer :: jx,jy,jz,jk,glbind
     integer :: nz_total     ! Total number of levels in the 3D fields
     integer :: n_vars       ! Number of 3D variables 
     integer :: n_surf_vars  ! Number of surf vars (sould be 0 for ocean/ice)
@@ -1026,6 +1026,9 @@ end subroutine dirac
 
        do jx=1,self%nx
 
+!> Define a global index
+          glbind = (jy-1)*self%nx+jx
+
 !> Initialise counter
           jk = 1
 
@@ -1046,8 +1049,10 @@ end subroutine dirac
                n_vars, &
                n_surf_vars, &
                cmask, &
-               0)
-          ug%last%column%cols(:) = vv(:)
+               1, glbind)
+!              0)
+          ug%last%column%fld3d(:) = vv(:)
+!         ug%last%column%cols(:) = vv(:)
 
        enddo
     enddo
@@ -1093,7 +1098,8 @@ end subroutine dirac
           jk = 1
 
           do jz = 1,self%nz                                          ! T
-             self%T(jx,jy,jz) = current%column%cols(jk)
+!            self%T(jx,jy,jz) = current%column%cols(jk)
+             self%T(jx,jy,jz) = current%column%fld3d(jk)
              jk = jk + 1
           end do
 
