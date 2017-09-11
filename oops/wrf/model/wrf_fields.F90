@@ -428,6 +428,10 @@ real(kind=kind_real), DIMENSION (:,:,:), ALLOCATABLE :: P,H,U,V,T,QVAPOR,PB,PH,P
 integer :: nf 
 nf = 0
 
+! Read data
+if (mpl%main) then
+
+
 !> Read the WRF file name to load in the namelist gridfname
 if (.NOT. config_element_exists(c_conf,"filename")) then
     write (*,'(/,A,/)') "ERROR: Cannot find entry 'filename' in 'Fields' record"
@@ -599,6 +603,16 @@ call ncerr(subr,nf90_get_var(ncid,V_id,V,(/1,1,1/),(/west_east,south_north+1,bot
   write (*,*) " U = ",fld%U(west_east/2,south_north/2,bottom_top/2)
   write (*,*) " V = ",fld%V(west_east/2,south_north/2,bottom_top/2)
 
+  ! Broadcast data
+  call mpl_bcast(fld%P,mpl%ioproc)
+  call mpl_bcast(fld%H,mpl%ioproc)
+  call mpl_bcast(fld%T,mpl%ioproc)
+  call mpl_bcast(fld%Q,mpl%ioproc)
+  call mpl_bcast(fld%U,mpl%ioproc)
+  call mpl_bcast(fld%V,mpl%ioproc)
+
+  endif
+
   return
 end subroutine read_file
 
@@ -624,6 +638,8 @@ character (len=max_string_length) :: subr = "write_fields"
 character (len=max_string_length) :: filename
 
    call check(fld)
+
+if (mpl%main) then
 
    filename = config_get_string(c_conf, len(filename), "fileout")
 
@@ -724,7 +740,9 @@ character (len=max_string_length) :: filename
 
    iret = nf90_close(ncid)
    CALL check_err (iret, subr)
- 
+
+endif ! mpl%main 
+
    return
 end subroutine write_file
 
@@ -1030,6 +1048,10 @@ end subroutine dirac
 !> Define a global index
           glbind = (jy-1)*self%nx+jx
 
+!         write(*,*) mpl%myproc,glbind,self%geom%iproc(jx,jy)
+!> Add column only for a given MPI task
+          if (self%geom%iproc(jx,jy)==mpl%myproc) then
+
 !> Initialise counter
           jk = 1
 
@@ -1043,8 +1065,6 @@ end subroutine dirac
 
 !      write(*,'(3I4,2(A,F10.5,A))') jx,jy,jz,' lon = ',self%geom%lon(jx,jy),'E, ',' lat = ',self%geom%lat(1,jy),'N'
 
-!> Add column only for a given MPI task
-!FCV          if (self%geom%iproc(jx,jy)==mpl%myproc) then
 !> Add the point on the unstructured grid
           call add_column(ug, self%geom%lat(jx,jy), self%geom%lon(jx,jy), &
                area, &
@@ -1056,7 +1076,7 @@ end subroutine dirac
 !              0)
           ug%last%column%fld3d(:) = vv(:)
 !         ug%last%column%cols(:) = vv(:)
-!FCV          endif ! mpl%myproc
+          endif ! mpl%myproc
        enddo
     enddo
 
@@ -1100,7 +1120,7 @@ end subroutine dirac
        do jx=1,self%nx
 
 !> Get column only for a given MPI task
-!FCV          if (self%geom%iproc(jx,jy)==mpl%myproc) then
+              if (self%geom%iproc(jx,jy)==mpl%myproc) then
 
 !> initialize counter
           jk = 1
@@ -1112,96 +1132,93 @@ end subroutine dirac
           end do
 
           current => current%next
-!FCV          endif ! mpl%myproc
+              endif ! mpl%myproc
 
        enddo
     enddo
 
 
 ! Communication
-!FCVif (mpl%main) then
+    if (mpl%main) then
 
-!FCV   do iproc=1,mpl%nproc
+       do iproc=1,mpl%nproc
 
-!FCV      if (iproc/=mpl%ioproc) then
+          if (iproc/=mpl%ioproc) then
 
          ! Allocation
-!FCV         nbuf = count(self%geom%iproc==iproc)*self%nf*self%nz
-!FCV         allocate(rbuf(nbuf))
+             nbuf = count(self%geom%iproc==iproc)*n_vars*self%nz
+             allocate(rbuf(nbuf))
 
          ! Receive data on ioproc
-!FCV         call mpl_recv(nbuf,rbuf,iproc,mpl%tag)
+             call mpl_recv(nbuf,rbuf,iproc,mpl%tag)
 
          ! Format data
-!FCV         jbuf = 0
-!FCV         do jy=1,self%ny
-!FCV           do jx=1,self%ny
+             jbuf = 0
+             do jy=1,self%ny
+               do jx=1,self%ny
 
-!FCV             if (self%geom%iproc(jx,jy)==iproc) then
+                 if (self%geom%iproc(jx,jy)==iproc) then
 
               ! initialize vertical counter
-!FCV                 jk = 1
+                     jk = 1
 
                 ! Copy one 3d field at the time
-!FCV                 do jz = 1,self%nz
-!FCV                    jbuf = jbuf+1
-!FCV                    self%T(jx,jy,jz) = rbuf(jbuf)
-!FCV                    jk = jk + 1
-!FCV                 end do
+                     do jz = 1,self%nz
+                        jbuf = jbuf+1
+                        self%T(jx,jy,jz) = rbuf(jbuf)
+                        jk = jk + 1
+                     end do
 
-!FCV             endif
+                 endif
 
-!FCV           enddo
-!FCV         enddo
+               enddo
+             enddo
 
          ! Release memory
-!FCV         deallocate(rbuf)
+             deallocate(rbuf)
 
-!FCV      end if
-!FCV   end do
+          end if
+       end do
 
-!FCVelse
+    else
          ! Allocation
-!FCV         nbuf = count(self%geom%iproc==mpl%myproc)*self%nf*self%nz
-!FCV         allocate(sbuf(nbuf))
-
-         ! Receive data on ioproc
-!FCV         call mpl_recv(nbuf,rbuf,iproc,mpl%tag)
+             nbuf = count(self%geom%iproc==mpl%myproc)*n_vars*self%nz
+             allocate(sbuf(nbuf))
 
          ! Format data
-!FCV         jbuf = 0
-!FCV         do jy=1,self%ny
-!FCV           do jx=1,self%nx
+             jbuf = 0
+             do jy=1,self%ny
+               do jx=1,self%nx
 
-!FCV             if (self%geom%iproc(jx,jy)==mpl%myproc) then
+                 if (self%geom%iproc(jx,jy)==mpl%myproc) then
 
               ! initialize vertical counter
-!FCV                 jk = 1
+                     jk = 1
 
-!FCV                ! Copy one 3d field at the time
-!FCV                 do jz = 1,self%nz
-!FCV                    jbuf = jbuf+1
-!FCV                    self%T(jx,jy,jz) = sbuf(jbuf)
-!FCV                    jk = jk + 1
-!FCV                 end do
+                    ! Copy one 3d field at the time
+                     do jz = 1,self%nz
+                        jbuf = jbuf+1
+                        sbuf(jbuf) = self%T(jx,jy,jz)
+                        jk = jk + 1
+                     end do
 
-!FCV             endif
+                 endif
 
-!FCV            enddo
-!FCV         enddo
+                enddo
+             enddo
 
          ! Send data to ioproc
-!FCV         call mpl_send(nbuf,sbuf,mpl%ioproc,mpl%tag)
+             call mpl_send(nbuf,sbuf,mpl%ioproc,mpl%tag)
 
          ! Release memory
-!FCV         deallocate(sbuf)
+             deallocate(sbuf)
 
-!FCVend if
+    end if
 
-!FCVmpl%tag = mpl%tag+1
+    mpl%tag = mpl%tag+1
 
 ! Broadcast
-!FCVcall mpl_bcast(self%gfld3d,mpl%ioproc)
+    call mpl_bcast(self%T,mpl%ioproc)
 
   return
   end subroutine convert_from_ug
