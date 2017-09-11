@@ -14,12 +14,23 @@ source /glade/u/apps/ch/opt/Lmod/7.3.14/lmod/7.3.14/init/ksh
 module purge
 module load gnu netcdf openmpi
 
+# Set the model to test (qg, wrf or mom5cice5)
+model=wrf
+
 # Go to test directory
-OOPSDIR=/glade/u/home/menetrie/OOPS
-cd ${OOPSDIR}/build/oops/qg/test
+#OOPSDIR=/glade/u/home/menetrie/OOPS
+if [ ! "${PBS_O_WORKDIR:-unset}" ]
+then
+    OOPSDIR=$PBS_O_WORKDIR
+
+else
+    OOPSDIR=$PWD
+fi
+
+cd ${OOPSDIR}/build/oops/${model}/test
 
 # Specify number of OpenMP threads
 export OMP_NUM_THREADS=9
 
 # Run!
-mpirun ${OOPSDIR}/build/bin/qg_dirac.x testinput/dirac.nicas.json
+mpirun ${OOPSDIR}/build/bin/${model}_dirac.x testinput/dirac.nicas.json
